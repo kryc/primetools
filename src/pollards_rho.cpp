@@ -137,6 +137,25 @@ BrentPollardsRho(
 
 std::optional<std::pair<mpz_class, mpz_class>>
 BrentPollardsRho(
+    const mpz_class N,
+    const size_t Max
+)
+{
+    // The default starting value is 2
+    static const mpz_class DefaultStartingValue = 2;
+    // The deafult M is 1000
+    static const size_t DefaultM = 1000;
+    
+    return BrentPollardsRho(
+        N,
+        DefaultM,
+        DefaultStartingValue,
+        Max
+    );
+}
+
+std::optional<std::pair<mpz_class, mpz_class>>
+BrentPollardsRho(
     const mpz_class N
 )
 {

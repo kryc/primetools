@@ -32,6 +32,12 @@ BrentPollardsRho(
 
 std::optional<std::pair<mpz_class, mpz_class>>
 BrentPollardsRho(
+    const mpz_class N,
+    const size_t Max
+);
+
+std::optional<std::pair<mpz_class, mpz_class>>
+BrentPollardsRho(
     const mpz_class N
 );
 

@@ -9,17 +9,42 @@
 namespace primetools {
 
 const std::optional<std::pair<mpz_class, mpz_class>>
-FermatFactorization(
+FermatFactorisation(
     const mpz_class& N,
+    const size_t Offset,
     const size_t Max
 );
 
 inline const std::optional<std::pair<mpz_class, mpz_class>>
-FermatFactorization(
+FermatFactorisation(
     const mpz_class& N
 )
 {
-    return FermatFactorization(N, (std::numeric_limits<size_t>::max)());
+    return FermatFactorisation(
+        N,
+        0,
+        (std::numeric_limits<size_t>::max)()
+    );
+}
+
+// Sieve improvement for fermat's factorization
+const std::optional<std::pair<mpz_class, mpz_class>>
+FermatSieve(
+    const mpz_class& N,
+    const size_t Offset,
+    const size_t Max
+);
+
+inline const std::optional<std::pair<mpz_class, mpz_class>>
+FermatSieve(
+    const mpz_class& N
+)
+{
+    return FermatSieve(
+        N,
+        0,
+        (std::numeric_limits<size_t>::max)()
+    );
 }
 
 }

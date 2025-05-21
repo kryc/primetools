@@ -1,3 +1,5 @@
+#include <iostream>
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -20,12 +22,32 @@ FactoriseSmallPrimes(
         return std::nullopt;
     }
 
-    mpz_class n = N;
-    mpz_class factor = 0;
-
     for (const auto& prime : g_FirstPrimes) {
-        if (n % prime == 0) {
-            return std::make_pair(prime, n / prime);
+        if (N % prime == 0) {
+            return std::make_pair(prime, N / prime);
+        }
+    }
+
+    return std::nullopt;
+}
+
+// Factorise against next _Count_ primes
+const std::optional<std::pair<mpz_class, mpz_class>>
+FactoriseSmallPrimes2(
+    const mpz_class& N,
+    const size_t Count
+)
+{
+    if (N < 2) {
+        return std::nullopt;
+    }
+
+    mpz_class prime = g_FirstPrimes.back();
+
+    for (size_t i = 0; i < Count; ++i) {
+        mpz_nextprime(prime.get_mpz_t(), prime.get_mpz_t());
+        if (N % prime == 0) {
+            return std::make_pair(prime, N / prime);
         }
     }
 
@@ -42,19 +64,36 @@ Factorise(
     }
 
     // Check for small prime factors
+    std::cout << "Checking small primes..." << std::endl;
     auto result = FactoriseSmallPrimes(N);
     if (result) {
         return result;
     }
 
-    // Use Fermat's factorization method up to 2^20 iterations
-    result = FermatFactorization(N, 1 << 20);
+    // Use Fermat's factorization method up to 2^16 iterations
+    std::cout << "Trying Fermat's factorization..." << std::endl;
+    result = FermatFactorisation(N, 0, (size_t)1 << 16);
+    if (result) {
+        return result;
+    }
+
+    // Continue small primes
+    std::cout << "Checking more small primes..." << std::endl;
+    result = FactoriseSmallPrimes2(N, 900000);
+    if (result) {
+        return result;
+    }
+
+    // Try some more Fermat's factorization
+    std::cout << "Trying Fermat's factorization again..." << std::endl;
+    result = FermatFactorisation(N, (size_t)1 << 16, (size_t)1 << 28);
     if (result) {
         return result;
     }
 
     // Use Pollard's rho algorithm
-    result = BrentPollardsRho(N);
+    std::cout << "Trying Pollard's rho..." << std::endl;
+    result = BrentPollardsRho(N, std::numeric_limits<size_t>::max());
     if (result) {
         return result;
     }

@@ -97,6 +97,32 @@ int main(
         bool is_prime = primetools::isprime(n);
         std::cout << n << (is_prime ? " is prime." : " is not prime.") << std::endl;
     }
+    else if (action == "fermat")
+    {
+        if (argc != 3) {
+            std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
+            return 1;
+        }
+
+        mpz_class n(argv[2]);
+
+        std::cout << "Fermat factorization of " << n << std::endl;
+
+        auto result = primetools::FermatFactorisation(n);
+        OutputFactors(result);
+    }
+    else if (action == "fermat-sieve")
+    {
+        if (argc != 3) {
+            std::cerr << "Usage: " << argv[0] << " fermat-sieve <number>" << std::endl;
+            return 1;
+        }
+
+        mpz_class n(argv[2]);
+
+        auto result = primetools::FermatSieve(n);
+        OutputFactors(result);
+    }
     else if (action == "pollardsrho")
     {
         if (argc != 3) {
