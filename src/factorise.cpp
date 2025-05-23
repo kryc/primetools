@@ -12,6 +12,23 @@
 
 namespace primetools {
 
+const std::optional<std::pair<mpz_class, mpz_class>>
+FactorisePerfectSquare(
+    const mpz_class& N
+)
+{
+    if (N < 2) {
+        return std::nullopt;
+    }
+
+    if (mpz_perfect_square_p(N.get_mpz_t())) {
+        mpz_class sqrtN = sqrt(N);
+        return std::make_pair(sqrtN, sqrtN);
+    }
+
+    return std::nullopt;
+}
+
 // Factorise against the list of the first 100,000 primes
 const std::optional<std::pair<mpz_class, mpz_class>>
 FactoriseSmallPrimes(
@@ -22,9 +39,10 @@ FactoriseSmallPrimes(
         return std::nullopt;
     }
 
-    for (const auto& prime : g_FirstPrimes) {
-        if (N % prime == 0) {
-            return std::make_pair(prime, N / prime);
+    for (const auto prime : g_FirstPrimes) {
+        if (mpz_divisible_ui_p(N.get_mpz_t(), prime)) {
+            mpz_class factor = N / prime;
+            return std::make_pair(prime, factor);
         }
     }
 
@@ -63,9 +81,16 @@ Factorise(
         return std::nullopt;
     }
 
+    // Check for perfect square
+    std::cout << "Checking for perfect square..." << std::endl;
+    auto result = FactorisePerfectSquare(N);
+    if (result) {
+        return result;
+    }
+
     // Check for small prime factors
     std::cout << "Checking small primes..." << std::endl;
-    auto result = FactoriseSmallPrimes(N);
+    result = FactoriseSmallPrimes(N);
     if (result) {
         return result;
     }
