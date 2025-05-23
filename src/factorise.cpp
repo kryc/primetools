@@ -39,7 +39,10 @@ FactoriseSmallPrimes(
         return std::nullopt;
     }
 
-    for (const auto prime : g_FirstPrimes) {
+    unsigned long int prime = 0;
+
+    for (const auto prime_difference : g_FirstPrimes) {
+        prime += prime_difference;
         if (mpz_divisible_ui_p(N.get_mpz_t(), prime)) {
             mpz_class factor = N / prime;
             return std::make_pair(prime, factor);
@@ -51,8 +54,9 @@ FactoriseSmallPrimes(
 
 // Factorise against next _Count_ primes
 const std::optional<std::pair<mpz_class, mpz_class>>
-FactoriseSmallPrimes2(
+FactorisePrimesInRange(
     const mpz_class& N,
+    const mpz_class& Start,
     const size_t Count
 )
 {
@@ -60,13 +64,13 @@ FactoriseSmallPrimes2(
         return std::nullopt;
     }
 
-    mpz_class prime = g_FirstPrimes.back();
+    mpz_class prime = Start;
 
     for (size_t i = 0; i < Count; ++i) {
-        mpz_nextprime(prime.get_mpz_t(), prime.get_mpz_t());
         if (N % prime == 0) {
             return std::make_pair(prime, N / prime);
         }
+        mpz_nextprime(prime.get_mpz_t(), prime.get_mpz_t());
     }
 
     return std::nullopt;
@@ -97,21 +101,7 @@ Factorise(
 
     // Use Fermat's factorization method up to 2^16 iterations
     std::cout << "Trying Fermat's factorization..." << std::endl;
-    result = FermatFactorisation(N, 0, (size_t)1 << 16);
-    if (result) {
-        return result;
-    }
-
-    // Continue small primes
-    std::cout << "Checking more small primes..." << std::endl;
-    result = FactoriseSmallPrimes2(N, 900000);
-    if (result) {
-        return result;
-    }
-
-    // Try some more Fermat's factorization
-    std::cout << "Trying Fermat's factorization again..." << std::endl;
-    result = FermatFactorisation(N, (size_t)1 << 16, (size_t)1 << 28);
+    result = FermatFactorisation(N, 0, (size_t)1 << 24);
     if (result) {
         return result;
     }
