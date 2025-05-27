@@ -5,6 +5,19 @@
 
 namespace primetools {
 
+// Given an N to factor, calculate the maximum number of iterations
+// to perform in Fermat's factorization method. The given formula is
+// The 4th root of N, rounded up to the nearest integer.
+const size_t
+CalculateFermatIterations(
+    const mpz_class& N
+)
+{
+    mpz_class root4;
+    mpz_root(root4.get_mpz_t(), N.get_mpz_t(), 4);
+    return static_cast<size_t>(root4.get_ui()) + 1;
+}
+
 const std::optional<std::pair<mpz_class, mpz_class>>
 FermatFactorisation(
     const mpz_class& N,

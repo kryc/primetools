@@ -8,6 +8,11 @@
 
 namespace primetools {
 
+const size_t
+CalculateFermatIterations(
+    const mpz_class& N
+);
+
 const std::optional<std::pair<mpz_class, mpz_class>>
 FermatFactorisation(
     const mpz_class& N,

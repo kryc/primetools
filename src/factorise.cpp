@@ -120,9 +120,11 @@ Factorise(
         return result;
     }
 
-    // Use Fermat's factorization method up to 2^16 iterations
-    std::cout << "Trying Fermat's factorization..." << std::endl;
-    result = FermatFactorisation(N, 0, (size_t)1 << 24);
+    // Use Fermat's factorization method up to 2^24 iterations
+    size_t iterations = CalculateFermatIterations(N);
+    iterations = std::min(iterations, (size_t)1 << 24);
+    std::cout << "Trying " << iterations << " iterations of Fermat's factorization..." << std::endl;
+    result = FermatFactorisation(N, 0, iterations);
     if (result) {
         return result;
     }
