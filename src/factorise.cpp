@@ -1,6 +1,7 @@
 #include <iostream>
 #include <limits>
 #include <optional>
+#include <span>
 #include <utility>
 
 #include <gmpxx.h>
@@ -8,9 +9,12 @@
 #include "factorise.hpp"
 #include "fermat.hpp"
 #include "pollards_rho.hpp"
-#include "primes.hpp"
 
 namespace primetools {
+
+static const unsigned char g_Primes[] = {
+#embed "../rsrc/small_primes.bin"
+};
 
 const std::optional<std::pair<mpz_class, mpz_class>>
 FactorisePerfectSquare(
@@ -41,11 +45,23 @@ FactoriseSmallPrimes(
 
     unsigned long int prime = 0;
 
-    for (const auto prime_difference : g_FirstPrimes) {
-        prime += prime_difference;
+    // primes_data is a vlq-encoded array of the differences between primes
+    for (size_t i = 0; i < sizeof(g_Primes);) {
+        // Decode vlq-encoded prime difference
+        size_t primediff = 0;
+        size_t shift = 0;
+        uint8_t byte;
+        do {
+            byte = g_Primes[i++];
+            primediff |= (byte & 0x7F) << shift;
+            shift += 7;
+        } while (i < sizeof(g_Primes) && (byte & 0x80) != 0);
+
+        prime += primediff;
+
         if (mpz_divisible_ui_p(N.get_mpz_t(), prime)) {
             mpz_class factor = N / prime;
-            return std::make_pair(prime, factor);
+            return std::make_pair(mpz_class(prime), factor);
         }
     }
 
@@ -57,17 +73,22 @@ const std::optional<std::pair<mpz_class, mpz_class>>
 FactorisePrimesInRange(
     const mpz_class& N,
     const mpz_class& Start,
-    const size_t Count
+    const mpz_class& End
 )
 {
     if (N < 2) {
         return std::nullopt;
     }
 
-    mpz_class prime = Start;
+    mpz_class prime;
 
-    for (size_t i = 0; i < Count; ++i) {
-        if (N % prime == 0) {
+    // Check if start is prime
+    if (mpz_probab_prime_p(prime.get_mpz_t(), 25) == 0) {
+        mpz_nextprime(prime.get_mpz_t(), prime.get_mpz_t());
+    }
+
+    while (prime <= End) {
+        if (mpz_divisible_p(N.get_mpz_t(), prime.get_mpz_t())) {
             return std::make_pair(prime, N / prime);
         }
         mpz_nextprime(prime.get_mpz_t(), prime.get_mpz_t());
