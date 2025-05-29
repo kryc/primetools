@@ -1,25 +1,17 @@
 #ifndef EULER_HPP
 #define EULER_HPP
 
-template <typename T>
-const T
+#include <gmpxx.h>
+
+const mpz_class
 EulerTotient(
-    const T N
-)
-{
-    T result = N;
-    for (T p = 2; p * p <= N; ++p) {
-        if (N % p == 0) {
-            while (N % p == 0) {
-                N /= p;
-            }
-            result -= result / p;
-        }
-    }
-    if (N > 1) {
-        result -= result / N;
-    }
-    return result;
-}
+    const mpz_class N
+);
+
+const bool
+EulerCriterion(
+    const mpz_class A,
+    const mpz_class P
+);
 
 #endif // EULER_HPP
