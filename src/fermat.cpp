@@ -1,5 +1,7 @@
 #include "fermat.hpp"
+
 #include <algorithm>
+#include <cinttypes>
 #include <iostream>
 
 
@@ -31,29 +33,24 @@ FermatFactorisation(
 
     mpz_class a, b;
 
-    mpz_sqrt(a.get_mpz_t(), N.get_mpz_t());
-    a += 1 + Offset;
+    a = sqrt(N) + 1 + Offset;
 
     for (size_t i = 0; i < Max; ++i) {
         b = (a * a) - N;
 
         if (mpz_perfect_square_p(b.get_mpz_t())) {
-            mpz_sqrt(b.get_mpz_t(), b.get_mpz_t());
-            return std::make_pair(a - b, a + b);
+            return std::make_pair(a - sqrt(b), a + sqrt(b));
         }
 
-        ++a;
+        a++;
     }
 
     return std::nullopt;
 }
 
-
-// Sieve improvement for fermat's factorization
 const std::optional<std::pair<mpz_class, mpz_class>>
-FermatSieve(
+FermatFactorisationAlgorithm2(
     const mpz_class& N,
-    const size_t Offset,
     const size_t Max
 )
 {
@@ -61,37 +58,133 @@ FermatSieve(
         return std::nullopt;
     }
 
-    mpz_class a, b;
-
-    mpz_sqrt(a.get_mpz_t(), N.get_mpz_t());
-    a += 1 + Offset;
+    mpz_class u, v, r;
+    u = 2 * sqrt(N);
+    v = 0;
 
     for (size_t i = 0; i < Max; ++i) {
-
-        // Sieve improvement: Skip values that cannot be perfect squares
-        // We do it as a switch statement to help the compiler optimize
-        auto remainder = mpz_fdiv_ui(a.get_mpz_t(), 20);
-
-        bool skip = false;
-        switch (remainder)
-        {
-        case 1:
-        case 9:
-        case 11:
-        case 19:
-            skip = true;
-            break;
+        r = (u * u) - (v * v) - 4 * N;
+        if (r == 0) {
+            mpz_class p = (u - v) / 2;
+            mpz_class q = (u + v) / 2;
+            return std::make_pair(p, q);
         }
+        else if (r > 0) {
+            v += 2;
+        } else {
+            u += 2;
+        }
+    }
 
-        if (!skip){
-            b = (a * a) - N;
-            if (mpz_perfect_square_p(b.get_mpz_t())) {
-                mpz_sqrt(b.get_mpz_t(), b.get_mpz_t());
-                return std::make_pair(a - b, a + b);
+    return std::nullopt;
+}
+
+const mpz_class
+ChangeN(
+    const mpz_class& X,
+    const unsigned char NMod20
+)
+{
+    mpz_class x = X;
+    switch(NMod20)
+    {
+    case 1:
+        while (x % 10 != 1 && x % 10 != 5 && x % 10 != 9)
+            x++;
+        break;
+    case 3:
+        while (x % 10 != 2 && x % 10 != 8)
+            x++;
+        break;
+    case 7:
+        while (x % 10 != 4 && x % 10 != 6)
+            x++;
+        break;
+    case 9:
+        while (x % 10 != 3 && x % 10 != 5 && x % 10 != 7)
+            x++;
+        break;
+    case 11:
+        while (x % 10 != 0 && x % 10 != 4 && x % 10 != 6)
+            x++;
+        break;
+    case 13:
+        while (x % 10 != 3 && x % 10 != 7)
+            x++;
+        break;
+    case 17:
+        while (x % 10 != 1 && x % 10 != 9)
+            x++;
+        break;
+    case 19:
+        while (x % 10 != 0 && x % 10 != 2 && x % 10 != 8)
+            x++;
+        break;
+    }
+    return x;
+}
+
+const int8_t g_MFFV4_LUT[20][3] = {
+    { 0, 0, 0  }, // 0
+    { 1, 5, 9  }, // 1
+    { 0, 0, 0  }, // 2
+    { 2, 8, -1 }, // 3
+    { 0, 0, 0  }, // 4
+    { 0, 0, 0  }, // 5
+    { 0, 0, 0  }, // 6
+    { 4, 6, -1 }, // 7
+    { 0, 0, 0  }, // 8
+    { 0, 0, 0  }, // 9
+    { 0, 0, 0  }, //10
+    { 0, 4, -1 }, //11
+    { 0, 0, 0  }, //12
+    { 3, 7, -1 }, //13
+    { 0, 0, 0  }, //14
+    { 0, 0, 0  }, //15
+    { 0, 0, 0  }, //16
+    { 1, 9, -1 }, //17
+    { 0, 0, 0  }, //18
+    { 0, 2, 8  }  //19
+};
+
+/*
+ * Modified Fermat Factorisation Version 4 (MFFV4)
+ * This version is based on Somsuk's MFFV4 algorithm as described in
+ * "A New Modified Integer Factorization Algorithm using Integer Modulo 20's Technique"
+ * https://ieeexplore.ieee.org/document/6978214
+ */
+const std::optional<std::pair<mpz_class, mpz_class>>
+ModifiedFermatFactorisation4(
+    const mpz_class& N,
+    const size_t Max
+)
+{
+    if (N < 2) {
+        return std::nullopt;
+    }
+
+    mpz_class x = sqrt(N) + 1;
+    unsigned long int NMod20 = mpz_fdiv_ui(N.get_mpz_t(), 20);
+    x = ChangeN(x, NMod20);
+    mpz_class y = sqrt(x * x - N);
+
+    int8_t check[3];
+    check[0] = g_MFFV4_LUT[NMod20][0];
+    check[1] = g_MFFV4_LUT[NMod20][1];
+    check[2] = g_MFFV4_LUT[NMod20][2];
+
+    for (size_t i = 0; i < Max; i++) {
+        if (x % 10 == check[0] ||
+            x % 10 == check[1] ||
+            (check[2] != -1 && x % 10 == check[2])) {
+            y = x * x - N;
+            if (mpz_perfect_square_p(y.get_mpz_t())) {
+                mpz_class p = x - sqrt(y);
+                mpz_class q = x + sqrt(y);
+                return std::make_pair(p, q);
             }
         }
-
-        ++a;
+        x++;
     }
 
     return std::nullopt;

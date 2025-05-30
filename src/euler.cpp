@@ -12,7 +12,7 @@ EulerTotient(
     mpz_t result;
     mpz_init_set(result, N.get_mpz_t()); // Initialize result to N
     mpz_t p, n, rootN, temp;
-    mpz_inits(n, rootN, temp);
+    mpz_inits(n, rootN, temp, nullptr);
 
     mpz_set(n, N.get_mpz_t());
     mpz_sqrt(rootN, n); // Calculate sqrt(N)
@@ -39,7 +39,9 @@ EulerTotient(
         mpz_sub(result, result, temp); // result = result - (result / N)
     }
 
-    return mpz_class(result);
+    mpz_class resultClass(result);
+    mpz_clears(p, n, rootN, temp, result, nullptr);
+    return mpz_class(resultClass);
 }
 
 const bool
@@ -53,12 +55,14 @@ EulerCriterion(
     }
 
     mpz_t exponent, result;
-    mpz_inits(exponent, result);
+    mpz_inits(exponent, result, nullptr);
 
     // Calculate A^(P-1)/2 mod P
     mpz_sub_ui(exponent, P.get_mpz_t(), 1); // exponent = P - 1
     mpz_div_ui(exponent, exponent, 2); // exponent = (P - 1) / 2
     mpz_powm(result, A.get_mpz_t(), exponent, P.get_mpz_t());
 
-    return mpz_cmp_ui(result, 1); // If result is 1, then A is A quadratic residue mod P
+    auto ret = mpz_cmp_ui(result, 1); // If result is 1, then A is A quadratic residue mod P
+    mpz_clears(exponent, result, nullptr);
+    return ret == 0; // Return true if A is a quadratic residue mod P
 }

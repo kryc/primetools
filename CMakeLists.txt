@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(primetools VERSION 0.1.0 LANGUAGES CXX)
 
+set(CMAKE_CXX_COMPILER clang++ CACHE STRING "C++ compiler" FORCE)
 set(CMAKE_CXX_COMPILER clang++)
 
 set(CMAKE_CXX_STANDARD 26)

@@ -45,6 +45,20 @@ FindClosePrimes(
     }
 }
 
+const std::string
+TruncateNumber(
+    const mpz_class& Number,
+    const size_t StartDigits = 5,
+    const size_t EndDigits = 3
+)
+{
+    std::string str = Number.get_str();
+    if (str.length() <= StartDigits + EndDigits) {
+        return str;
+    }
+    return str.substr(0, StartDigits) + "..." + str.substr(str.length() - EndDigits);
+}
+
 void
 OutputFactors(
     const std::optional<std::pair<mpz_class, mpz_class>>& Factors
@@ -95,7 +109,7 @@ int main(
         mpz_class n(argv[2]);
 
         bool is_prime = primetools::isprime(n);
-        std::cout << n << (is_prime ? " is prime." : " is not prime.") << std::endl;
+        std::cout << TruncateNumber(n) << (is_prime ? " is prime." : " is not prime.") << std::endl;
     }
     else if (action == "fermat")
     {
@@ -106,21 +120,37 @@ int main(
 
         mpz_class n(argv[2]);
 
-        std::cout << "Fermat factorization of " << n << std::endl;
+        std::cout << "Fermat factorization of " << TruncateNumber(n) << std::endl;
 
         auto result = primetools::FermatFactorisation(n);
         OutputFactors(result);
     }
-    else if (action == "fermat-sieve")
+    else if (action == "fermat2" || action == "ffa2")
     {
         if (argc != 3) {
-            std::cerr << "Usage: " << argv[0] << " fermat-sieve <number>" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
             return 1;
         }
 
         mpz_class n(argv[2]);
 
-        auto result = primetools::FermatSieve(n);
+        std::cout << "Fermat factorization of " << TruncateNumber(n) << " using FFA-2" << std::endl;
+
+        auto result = primetools::FermatFactorisationAlgorithm2(n);
+        OutputFactors(result);
+    }
+    else if (action == "fermat4" || action == "mffv4")
+    {
+        if (argc != 3) {
+            std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
+            return 1;
+        }
+
+        mpz_class n(argv[2]);
+
+        std::cout << "Fermat factorization of " << TruncateNumber(n) << " using MFFV4" << std::endl;
+
+        auto result = primetools::ModifiedFermatFactorisation4(n);
         OutputFactors(result);
     }
     else if (action == "pollardsrho")

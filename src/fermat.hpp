@@ -1,6 +1,7 @@
 #ifndef FERMAT_HPP
 #define FERMAT_HPP
 
+#include <limits>
 #include <optional>
 #include <utility>
 
@@ -16,41 +17,21 @@ CalculateFermatIterations(
 const std::optional<std::pair<mpz_class, mpz_class>>
 FermatFactorisation(
     const mpz_class& N,
-    const size_t Offset,
-    const size_t Max
+    const size_t Offset = 0,
+    const size_t Max = std::numeric_limits<size_t>::max()
 );
 
-inline const std::optional<std::pair<mpz_class, mpz_class>>
-FermatFactorisation(
-    const mpz_class& N
-)
-{
-    return FermatFactorisation(
-        N,
-        0,
-        (std::numeric_limits<size_t>::max)()
-    );
-}
-
-// Sieve improvement for fermat's factorization
 const std::optional<std::pair<mpz_class, mpz_class>>
-FermatSieve(
+FermatFactorisationAlgorithm2(
     const mpz_class& N,
-    const size_t Offset,
-    const size_t Max
+    const size_t Max = std::numeric_limits<size_t>::max()
 );
 
-inline const std::optional<std::pair<mpz_class, mpz_class>>
-FermatSieve(
-    const mpz_class& N
-)
-{
-    return FermatSieve(
-        N,
-        0,
-        (std::numeric_limits<size_t>::max)()
-    );
-}
+const std::optional<std::pair<mpz_class, mpz_class>>
+ModifiedFermatFactorisation4(
+    const mpz_class& N,
+    const size_t Max = std::numeric_limits<size_t>::max()
+);
 
 }
 
