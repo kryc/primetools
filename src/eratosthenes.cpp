@@ -2,31 +2,66 @@
 #include <vector>
 
 #include "eratosthenes.hpp"
+#include "euler.hpp"
 
-std::vector<unsigned long int>
+std::vector<size_t>
 SieveOfEratosthenes(
-    unsigned long int limit
+    const size_t Limit
 )
 {
-    std::vector<bool> is_prime(limit + 1, true);
-    is_prime[0] = is_prime[1] = false; // 0 and 1 are not prime numbers
+    std::vector<bool> primes(Limit + 1, true);
+    primes[0] = primes[1] = false; // 0 and 1 are not prime numbers
 
-    unsigned long int sqrt_limit = static_cast<unsigned long int>(sqrt(limit));
+    const size_t s = static_cast<size_t>(sqrt(Limit));
 
-    for (unsigned long int p = 2; p < sqrt_limit; ++p) {
-        if (is_prime[p]) {
-            for (unsigned long int multiple = p * p; multiple <= limit; multiple += p) {
-                is_prime[multiple] = false;
+    for (size_t p = 2; p < s; ++p) {
+        if (primes[p]) {
+            for (size_t multiple = p * p; multiple <= Limit; multiple += p) {
+                primes[multiple] = false;
             }
         }
     }
 
-    std::vector<unsigned long int> primes;
-    for (unsigned long int num = 2; num <= limit; ++num) {
-        if (is_prime[num]) {
-            primes.push_back(num);
+    std::vector<size_t> result;
+    for (size_t num = 2; num <= Limit; ++num) {
+        if (primes[num]) {
+            result.push_back(num);
         }
     }
 
-    return primes;
+    return result;
+}
+
+std::vector<size_t>
+SieveOfEratosthenesQuadraticResidueP(
+    const size_t Limit,
+    const mpz_class P
+)
+{
+    std::vector<bool> primes(Limit + 1, true);
+    primes[0] = primes[1] = false; // 0 and 1 are not prime numbers
+
+    const size_t s = static_cast<size_t>(sqrt(Limit));
+
+    for (size_t p = 2; p <= s; ++p) {
+        if (primes[p]) {
+            // Set all multiples of p to false
+            for (size_t multiple = p * p; multiple <= Limit; multiple += p) {
+                primes[multiple] = false;
+            }
+            // Check for quadratic residue of p against P
+            if (!EulerCriterion(p, P)) {
+                primes[p] = false;
+            }
+        }
+    }
+
+    std::vector<size_t> result;
+    for (size_t num = 2; num <= Limit; ++num) {
+        if (primes[num]) {
+            result.push_back(num);
+        }
+    }
+
+    return result;
 }

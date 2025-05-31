@@ -3,9 +3,17 @@
 
 #include <vector>
 
-std::vector<unsigned long int>
+#include <gmpxx.h>
+
+std::vector<size_t>
 SieveOfEratosthenes(
-    unsigned long int limit
+    const size_t Limit
+);
+
+std::vector<size_t>
+SieveOfEratosthenesQuadraticResidueP(
+    const size_t Limit,
+    const mpz_class P
 );
 
 #endif // ERATOSTHENES_HPP
