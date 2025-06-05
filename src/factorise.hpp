@@ -7,7 +7,7 @@
 #include <gmpxx.h>
 
 #include "fermat.hpp"
-#include "pollards_rho.hpp"
+#include "pollard.hpp"
 
 namespace primetools {
 

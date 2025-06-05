@@ -4,7 +4,7 @@
 
 #include "gmpxx.h"
 
-#include "pollards_rho.hpp"
+#include "pollard.hpp"
 #include "util.hpp"
 
 namespace {
