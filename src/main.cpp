@@ -156,6 +156,21 @@ int main(
         auto result = primetools::ModifiedFermatFactorisation4(n, max_iterations);
         OutputFactors(result);
     }
+    else if (action == "fmmod20pc")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " fmmod20pc <number>" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+
+        std::cout << "Fermat factorization of " << TruncateNumber(n) << " using FMMod20Precomp" << std::endl;
+
+        auto result = primetools::FMMod20Precomp(n, max_iterations);
+        OutputFactors(result);
+    }
     else if (action == "pollardsrho")
     {
         if (argc < 3) {

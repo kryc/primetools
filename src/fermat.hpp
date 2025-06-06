@@ -33,6 +33,12 @@ ModifiedFermatFactorisation4(
     const size_t Max = std::numeric_limits<size_t>::max()
 );
 
+const std::optional<std::pair<mpz_class, mpz_class>>
+FMMod20Precomp(
+    const mpz_class& N,
+    const size_t Max
+);
+
 }
 
 #endif // FERMAT_HPP

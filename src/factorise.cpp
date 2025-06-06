@@ -123,8 +123,8 @@ Factorise(
     // Use Fermat's factorization method up to 2^24 iterations
     size_t iterations = CalculateFermatIterations(N);
     iterations = std::min(iterations, (size_t)1 << 24);
-    std::cout << "Trying " << iterations << " iterations of MFFV4 (Fermat) factorization..." << std::endl;
-    result = ModifiedFermatFactorisation4(N, iterations);
+    std::cout << "Trying " << iterations << " iterations of FMMod20Precomp (Fermat) factorization..." << std::endl;
+    result = FMMod20Precomp(N, iterations);
     if (result) {
         return result;
     }

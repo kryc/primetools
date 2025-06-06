@@ -128,7 +128,7 @@ ModifiedFermatFactorisation4(
     }
 
     mpz_class x = sqrt(N) + 1;
-    unsigned long int NMod20 = mpz_fdiv_ui(N.get_mpz_t(), 20);
+    uint64_t NMod20 = mpz_fdiv_ui(N.get_mpz_t(), 20);
     x = ChangeN(x, NMod20);
     mpz_class y = sqrt(x * x - N);
 
@@ -149,5 +149,68 @@ ModifiedFermatFactorisation4(
 
     return std::nullopt;
 }
+
+/*
+ * FMMod20Precomp
+ * This algorithm is based on Hatem M. Bahig's paper
+ * "Speeding Up Fermat’s Factoring Method using Precomputation"
+ * It works based on the observation that
+ * The value of 𝑢 𝑚𝑜𝑑 10 (or LSD(𝑢)) is variable, but for a fixed
+ * value of 𝑛 𝑚𝑜𝑑 20, the possible values of u, PS(𝑢2 − 𝑛) = True,
+ * can be determined initially.
+ */
+const std::optional<std::pair<mpz_class, mpz_class>>
+FMMod20Precomp(
+    const mpz_class& N,
+    const size_t Max
+)
+{
+    if (N < 2) {
+        return std::nullopt;
+    }
+
+    static const int8_t dif[20][4] = {
+        {},         { 1, 4, 4, 1 },  // 1
+        {},         { 2, 6, -1, 2 }, // 3
+        {}, {}, {}, { 4, 2, -1, 4 }, // 7
+        {},         { 3, 2, 2, 3 },  // 9
+        {},         { 0, 4, 2, 4 },  // 11
+        {},         { 3, 4, -1, 3 }, // 13
+        {}, {}, {}, { 1, 8, -1, 1 }, // 17
+        {},         { 0, 2, 6, 2 }   // 19
+    };
+
+    mpz_class u = sqrt(N) + 1;
+
+    // Repeat until u is congruent to 0 mod 10
+    // (or we found a factor)
+    while (mpz_fdiv_ui(u.get_mpz_t(), 10) != 0) {
+        mpz_class b = (u * u) - N;
+        if (mpz_perfect_square_p(b.get_mpz_t())) {
+            return std::make_pair(u - sqrt(b), u + sqrt(b));
+        }
+        u++;
+    }
+
+    uint64_t r = mpz_fdiv_ui(N.get_mpz_t(), 20);
+
+    for (size_t i = 0; i < Max; i++)
+    {
+        // Implement the cycle routine
+        for (size_t j = 0; j < 4; j++) {
+            if (dif[r][j] == -1) {
+                continue; // Skip invalid cycles
+            }
+            u += dif[r][j];
+            mpz_class b = (u * u) - N;
+            if (mpz_perfect_square_p(b.get_mpz_t())) {
+                return std::make_pair(u - sqrt(b), u + sqrt(b));
+            }
+        }
+    }
+
+    return std::nullopt;
+}
+    
 
 }
