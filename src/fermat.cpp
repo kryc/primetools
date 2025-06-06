@@ -80,48 +80,34 @@ FermatFactorisationAlgorithm2(
     return std::nullopt;
 }
 
+static const std::array<uint32_t,20> MFFV4XMod10LUT = {
+    0,       0b1000100010,  // 1 = { 1, 5, 9 }
+    0,       0b0100000100,  // 3 = { 2, 8 }
+    0, 0, 0, 0b0001010000,  // 7 = { 4, 6 }
+    0,       0b0010101000,  // 9 = { 3, 5, 7 }
+    0,       0b0001010001,  // 11 = { 0, 4, 6 }
+    0,       0b0010001000,  // 13 = { 3, 7 }
+    0, 0, 0, 0b1000000010,  // 17 = { 1, 9 }
+    0,       0b0100000101   // 19 = { 0, 2, 8 }
+};
+
 const mpz_class
 ChangeN(
     const mpz_class& X,
     const unsigned char NMod20
 )
 {
+    const uint32_t check = MFFV4XMod10LUT[NMod20];
+
     mpz_class x = X;
-    switch(NMod20)
+    uint64_t x_mod_10 = mpz_fdiv_ui(x.get_mpz_t(), 10);
+
+    while (!((1 << x_mod_10) & check))
     {
-    case 1:
-        while (x % 10 != 1 && x % 10 != 5 && x % 10 != 9)
-            x++;
-        break;
-    case 3:
-        while (x % 10 != 2 && x % 10 != 8)
-            x++;
-        break;
-    case 7:
-        while (x % 10 != 4 && x % 10 != 6)
-            x++;
-        break;
-    case 9:
-        while (x % 10 != 3 && x % 10 != 5 && x % 10 != 7)
-            x++;
-        break;
-    case 11:
-        while (x % 10 != 0 && x % 10 != 4 && x % 10 != 6)
-            x++;
-        break;
-    case 13:
-        while (x % 10 != 3 && x % 10 != 7)
-            x++;
-        break;
-    case 17:
-        while (x % 10 != 1 && x % 10 != 9)
-            x++;
-        break;
-    case 19:
-        while (x % 10 != 0 && x % 10 != 2 && x % 10 != 8)
-            x++;
-        break;
+        x++;
+        x_mod_10 = mpz_fdiv_ui(x.get_mpz_t(), 10);
     }
+
     return x;
 }
 
@@ -141,31 +127,16 @@ ModifiedFermatFactorisation4(
         return std::nullopt;
     }
 
-    static const int8_t MFFV4_LUT[20][3] = {
-        {},         { 1, 5, 9 },  // 1
-        {},         { 2, 8, -1 }, // 3
-        {}, {}, {}, { 4, 6, -1 }, // 7
-        {}, {}, {}, { 0, 4, -1 }, // 11
-        {},         { 3, 7, -1 }, // 13
-        {}, {}, {}, { 1, 9, -1 }, // 17
-        {},         { 0, 2, 8 }   // 19
-    };
-
     mpz_class x = sqrt(N) + 1;
     unsigned long int NMod20 = mpz_fdiv_ui(N.get_mpz_t(), 20);
     x = ChangeN(x, NMod20);
     mpz_class y = sqrt(x * x - N);
 
-    int8_t check[3];
-    check[0] = MFFV4_LUT[NMod20][0];
-    check[1] = MFFV4_LUT[NMod20][1];
-    check[2] = MFFV4_LUT[NMod20][2];
+    uint32_t check = MFFV4XMod10LUT[NMod20];
 
     for (size_t i = 0; i < Max; i++) {
         const uint64_t x_mod_10 = mpz_fdiv_ui(x.get_mpz_t(), 10);
-        if (x_mod_10 == check[0] ||
-            x_mod_10 == check[1] ||
-            x_mod_10 == check[2]) {
+        if ((1 << x_mod_10) & check) {
             y = x * x - N;
             if (mpz_perfect_square_p(y.get_mpz_t())) {
                 mpz_class p = x - sqrt(y);
