@@ -123,8 +123,15 @@ Factorise(
     // Use Fermat's factorization method up to 2^24 iterations
     size_t iterations = CalculateFermatIterations(N);
     iterations = std::min(iterations, (size_t)1 << 24);
-    std::cout << "Trying " << iterations << " iterations of Fermat's factorization..." << std::endl;
-    result = FermatFactorisation(N, 0, iterations);
+    std::cout << "Trying " << iterations << " iterations of MFFV4 (Fermat) factorization..." << std::endl;
+    result = ModifiedFermatFactorisation4(N, iterations);
+    if (result) {
+        return result;
+    }
+
+    // Try using Pollards P-1
+    std::cout << "Trying Pollard's P-1 (B2**20)..." << std::endl;
+    result = PollardsPMinus1(N, (size_t)1 << 20);
     if (result) {
         return result;
     }

@@ -41,6 +41,12 @@ BrentPollardsRho(
     const mpz_class N
 );
 
+std::optional<std::pair<mpz_class, mpz_class>>
+PollardsPMinus1(
+    const mpz_class& N,
+    const size_t B
+);
+
 }
 
 #endif // POLLARDS_RHO_HPP

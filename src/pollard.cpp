@@ -174,4 +174,34 @@ BrentPollardsRho(
     );
 }
 
+/*
+ * Pollard's NP-1 Algorithm
+ * This is a special case factorization algorithm that
+ * is effective when one of the factors consists only of
+ * the product of small primes.
+ */
+std::optional<std::pair<mpz_class, mpz_class>>
+PollardsPMinus1(
+    const mpz_class& N,
+    const size_t B
+)
+{
+    if (N < 2) {
+        return std::nullopt;
+    }
+
+    mpz_class a = 2;
+    mpz_class d;
+
+    for (size_t i = 2; i <= B; ++i) {
+        a = primetools::modexp(a, i, N);
+        d = primetools::gcd(a - 1, N);
+        if (d > 1 && d < N) {
+            return std::make_pair(d, N / d);
+        }
+    }
+
+    return std::nullopt;
+}
+
 } // namespace primetools

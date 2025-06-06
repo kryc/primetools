@@ -90,7 +90,7 @@ int main(
             return 1;
         }
 
-        mpz_class n(argv[2]);
+        const mpz_class n(argv[2]);
 
         auto result = primetools::Factorise(n);
         OutputFactors(result);
@@ -106,63 +106,93 @@ int main(
             return 1;
         }
 
-        mpz_class n(argv[2]);
+        const mpz_class n(argv[2]);
 
         bool is_prime = primetools::isprime(n);
         std::cout << TruncateNumber(n) << (is_prime ? " is prime." : " is not prime.") << std::endl;
     }
     else if (action == "fermat")
     {
-        if (argc != 3) {
+        if (argc < 3) {
             std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
             return 1;
         }
 
-        mpz_class n(argv[2]);
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
         std::cout << "Fermat factorization of " << TruncateNumber(n) << std::endl;
 
-        auto result = primetools::FermatFactorisation(n);
+        auto result = primetools::FermatFactorisation(n, 0, max_iterations);
         OutputFactors(result);
     }
     else if (action == "fermat2" || action == "ffa2")
     {
-        if (argc != 3) {
+        if (argc < 3) {
             std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
             return 1;
         }
 
-        mpz_class n(argv[2]);
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
         std::cout << "Fermat factorization of " << TruncateNumber(n) << " using FFA-2" << std::endl;
 
-        auto result = primetools::FermatFactorisationAlgorithm2(n);
+        auto result = primetools::FermatFactorisationAlgorithm2(n, max_iterations);
         OutputFactors(result);
     }
     else if (action == "fermat4" || action == "mffv4")
     {
-        if (argc != 3) {
+        if (argc < 3) {
             std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
             return 1;
         }
 
-        mpz_class n(argv[2]);
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
         std::cout << "Fermat factorization of " << TruncateNumber(n) << " using MFFV4" << std::endl;
 
-        auto result = primetools::ModifiedFermatFactorisation4(n);
+        auto result = primetools::ModifiedFermatFactorisation4(n, max_iterations);
         OutputFactors(result);
     }
     else if (action == "pollardsrho")
     {
-        if (argc != 3) {
+        if (argc < 3) {
             std::cerr << "Usage: " << argv[0] << " pollardsrho <number>" << std::endl;
             return 1;
         }
 
-        mpz_class n(argv[2]);
+        const mpz_class n(argv[2]);
+
+        std::cout << "Pollard's rho factorization of " << TruncateNumber(n) << std::endl;
 
         auto result = primetools::PollardsRho(n);
+        OutputFactors(result);
+    }
+    else if (action == "brentpollardsrho")
+    {
+        if (argc != 3) {
+            std::cerr << "Usage: " << argv[0] << " brentpollardsrho <number>" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+
+        auto result = primetools::BrentPollardsRho(n);
+        OutputFactors(result);
+    }
+    else if (action == "pollardp1")
+    {
+        if (argc != 4) {
+            std::cerr << "Usage: " << argv[0] << " pollardp1 <number> <bound>" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t bound = std::stoul(argv[3]);
+
+        auto result = primetools::PollardsPMinus1(n, bound);
         OutputFactors(result);
     }
     else
