@@ -1,6 +1,7 @@
 #include "fermat.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cinttypes>
 #include <iostream>
 
@@ -124,16 +125,6 @@ ChangeN(
     return x;
 }
 
-const int8_t g_MFFV4_LUT[20][3] = {
-    {},         { 1, 5, 9 },  // 1
-    {},         { 2, 8, -1 }, // 3
-    {}, {}, {}, { 4, 6, -1 }, // 7
-    {}, {}, {}, { 0, 4, -1 }, // 11
-    {},         { 3, 7, -1 }, // 13
-    {}, {}, {}, { 1, 9, -1 }, // 17
-    {},         { 0, 2, 8 }   // 19
-};
-
 /*
  * Modified Fermat Factorisation Version 4 (MFFV4)
  * This version is based on Somsuk's MFFV4 algorithm as described in
@@ -150,20 +141,31 @@ ModifiedFermatFactorisation4(
         return std::nullopt;
     }
 
+    static const int8_t MFFV4_LUT[20][3] = {
+        {},         { 1, 5, 9 },  // 1
+        {},         { 2, 8, -1 }, // 3
+        {}, {}, {}, { 4, 6, -1 }, // 7
+        {}, {}, {}, { 0, 4, -1 }, // 11
+        {},         { 3, 7, -1 }, // 13
+        {}, {}, {}, { 1, 9, -1 }, // 17
+        {},         { 0, 2, 8 }   // 19
+    };
+
     mpz_class x = sqrt(N) + 1;
     unsigned long int NMod20 = mpz_fdiv_ui(N.get_mpz_t(), 20);
     x = ChangeN(x, NMod20);
     mpz_class y = sqrt(x * x - N);
 
     int8_t check[3];
-    check[0] = g_MFFV4_LUT[NMod20][0];
-    check[1] = g_MFFV4_LUT[NMod20][1];
-    check[2] = g_MFFV4_LUT[NMod20][2];
+    check[0] = MFFV4_LUT[NMod20][0];
+    check[1] = MFFV4_LUT[NMod20][1];
+    check[2] = MFFV4_LUT[NMod20][2];
 
     for (size_t i = 0; i < Max; i++) {
-        if (x % 10 == check[0] ||
-            x % 10 == check[1] ||
-            (check[2] != -1 && x % 10 == check[2])) {
+        const uint64_t x_mod_10 = mpz_fdiv_ui(x.get_mpz_t(), 10);
+        if (x_mod_10 == check[0] ||
+            x_mod_10 == check[1] ||
+            x_mod_10 == check[2]) {
             y = x * x - N;
             if (mpz_perfect_square_p(y.get_mpz_t())) {
                 mpz_class p = x - sqrt(y);
