@@ -80,37 +80,6 @@ FermatFactorisationAlgorithm2(
     return std::nullopt;
 }
 
-static const std::array<uint32_t,20> MFFV4XMod10LUT = {
-    0,       0b1000100010,  // 1 = { 1, 5, 9 }
-    0,       0b0100000100,  // 3 = { 2, 8 }
-    0, 0, 0, 0b0001010000,  // 7 = { 4, 6 }
-    0,       0b0010101000,  // 9 = { 3, 5, 7 }
-    0,       0b0001010001,  // 11 = { 0, 4, 6 }
-    0,       0b0010001000,  // 13 = { 3, 7 }
-    0, 0, 0, 0b1000000010,  // 17 = { 1, 9 }
-    0,       0b0100000101   // 19 = { 0, 2, 8 }
-};
-
-const mpz_class
-ChangeN(
-    const mpz_class& X,
-    const unsigned char NMod20
-)
-{
-    const uint32_t check = MFFV4XMod10LUT[NMod20];
-
-    mpz_class x = X;
-    uint64_t x_mod_10 = mpz_fdiv_ui(x.get_mpz_t(), 10);
-
-    while (!((1 << x_mod_10) & check))
-    {
-        x++;
-        x_mod_10 = mpz_fdiv_ui(x.get_mpz_t(), 10);
-    }
-
-    return x;
-}
-
 /*
  * Modified Fermat Factorisation Version 4 (MFFV4)
  * This version is based on Somsuk's MFFV4 algorithm as described in
@@ -127,9 +96,30 @@ ModifiedFermatFactorisation4(
         return std::nullopt;
     }
 
+    static const std::array<uint32_t,20> MFFV4XMod10LUT = {
+        0,       0b1000100010,  // 1 = { 1, 5, 9 }
+        0,       0b0100000100,  // 3 = { 2, 8 }
+        0, 0, 0, 0b0001010000,  // 7 = { 4, 6 }
+        0,       0b0010101000,  // 9 = { 3, 5, 7 }
+        0,       0b0001010001,  // 11 = { 0, 4, 6 }
+        0,       0b0010001000,  // 13 = { 3, 7 }
+        0, 0, 0, 0b1000000010,  // 17 = { 1, 9 }
+        0,       0b0100000101   // 19 = { 0, 2, 8 }
+    };
+
     mpz_class x = sqrt(N) + 1;
     uint64_t NMod20 = mpz_fdiv_ui(N.get_mpz_t(), 20);
-    x = ChangeN(x, NMod20);
+    
+    // Repeat until x is congruent to 0 mod 10
+    // or we found a factor (ChangeN function)
+    while (mpz_fdiv_ui(x.get_mpz_t(), 10) != 0) {
+        mpz_class b = (x * x) - N;
+        if (mpz_perfect_square_p(b.get_mpz_t())) {
+            return std::make_pair(x - sqrt(b), x + sqrt(b));
+        }
+        x++;
+    }
+
     mpz_class y = sqrt(x * x - N);
 
     uint32_t check = MFFV4XMod10LUT[NMod20];
