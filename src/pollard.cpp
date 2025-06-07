@@ -7,7 +7,7 @@
 #include "pollard.hpp"
 #include "util.hpp"
 
-namespace {
+namespace primetools {
 
 const mpz_class
 PollardsRhoPolynomial1(
@@ -26,10 +26,6 @@ PollardsRhoPolynomial2(
 {
     return (x * x + 1) % N;
 }
-
-}
-
-namespace primetools {
 
 std::optional<std::pair<mpz_class, mpz_class>>
 PollardsRho(
@@ -59,27 +55,6 @@ PollardsRho(
 }
 
 std::optional<std::pair<mpz_class, mpz_class>>
-PollardsRho(
-    const mpz_class N
-)
-{
-    // The original algoritm used a polynomial of the form x^2 - 1
-    // but more common now is x^2 + 1
-    static const auto DefaultPolynomial = std::function<mpz_class(mpz_class, mpz_class)>(PollardsRhoPolynomial2);
-    // The default max iterations is 2^32
-    static const size_t DefaultMaxIterations = (size_t)1 << 32;
-    // The default starting value is 2
-    static const mpz_class DefaultStartingValue = 2;
-    
-    return PollardsRho(
-        N,
-        DefaultPolynomial,
-        DefaultStartingValue,
-        DefaultMaxIterations
-    );
-}
-
-std::optional<std::pair<mpz_class, mpz_class>>
 BrentPollardsRho(
     const mpz_class N,
     const size_t M,
@@ -97,13 +72,13 @@ BrentPollardsRho(
     for (size_t i = 0; i < Max && d == 1; ++i) {
         y = x;
         for (size_t i = 0; i < l; ++i) {
-            x = PollardsRhoPolynomial2(x, N);
+            x = (x * x - 1) % N;
         }
         k = 0;
         while (k < l && d == 1) {
             xs = x;
             for (size_t i = 0; i < M && d == 1; ++i) {
-                x = PollardsRhoPolynomial2(x, N);
+                x = (x * x - 1) % N;
                 z = y - x;
                 // z = primetools::abs(z);
                 mpz_abs(z.get_mpz_t(), z.get_mpz_t());
@@ -118,7 +93,7 @@ BrentPollardsRho(
 
     if (d == N) {
         do {
-            xs = PollardsRhoPolynomial2(xs, N);
+            xs = (xs * xs - 1) % N;
             z = y - xs;
             // z = primetools::abs(z);
             mpz_abs(z.get_mpz_t(), z.get_mpz_t());
@@ -133,45 +108,6 @@ BrentPollardsRho(
     }
 
     return std::nullopt;
-}
-
-std::optional<std::pair<mpz_class, mpz_class>>
-BrentPollardsRho(
-    const mpz_class N,
-    const size_t Max
-)
-{
-    // The default starting value is 2
-    static const mpz_class DefaultStartingValue = 2;
-    // The deafult M is 1000
-    static const size_t DefaultM = 1000;
-    
-    return BrentPollardsRho(
-        N,
-        DefaultM,
-        DefaultStartingValue,
-        Max
-    );
-}
-
-std::optional<std::pair<mpz_class, mpz_class>>
-BrentPollardsRho(
-    const mpz_class N
-)
-{
-    // The default max iterations is 2^32
-    static const size_t DefaultMaxIterations = (size_t)1 << 32;
-    // The default starting value is 2
-    static const mpz_class DefaultStartingValue = 2;
-    // The deafult M is 1000
-    static const size_t DefaultM = 1000;
-    
-    return BrentPollardsRho(
-        N,
-        DefaultM,
-        DefaultStartingValue,
-        DefaultMaxIterations
-    );
 }
 
 /*

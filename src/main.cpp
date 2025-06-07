@@ -199,13 +199,13 @@ int main(
     }
     else if (action == "pollardp1")
     {
-        if (argc != 4) {
+        if (argc < 3) {
             std::cerr << "Usage: " << argv[0] << " pollardp1 <number> <bound>" << std::endl;
             return 1;
         }
 
         const mpz_class n(argv[2]);
-        const size_t bound = std::stoul(argv[3]);
+        const size_t bound = argc == 4 ? std::stoul(argv[3]) : (size_t)1 << 20;
 
         auto result = primetools::PollardsPMinus1(n, bound);
         OutputFactors(result);
