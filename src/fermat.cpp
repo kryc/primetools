@@ -169,15 +169,15 @@ FMMod20Precomp(
         return std::nullopt;
     }
 
-    static const int8_t dif[20][4] = {
-        {},         { 1, 4, 4, 1 },  // 1
-        {},         { 2, 6, -1, 2 }, // 3
-        {}, {}, {}, { 4, 2, -1, 4 }, // 7
-        {},         { 3, 2, 2, 3 },  // 9
-        {},         { 0, 4, 2, 4 },  // 11
-        {},         { 3, 4, -1, 3 }, // 13
-        {}, {}, {}, { 1, 8, -1, 1 }, // 17
-        {},         { 0, 2, 6, 2 }   // 19
+    static const uint32_t DIF_LUT[20] = {
+        0,       0x01040401, //  1 = { 1, 4, 4, 1 }
+        0,       0x02ff0602, //  3 = { 2, 6, -1, 2 }
+        0, 0, 0, 0x04ff0204, //  7 = { 4, 2, -1, 4 }
+        0,       0x03020203, //  9 = { 3, 2, 2, 3 }
+        0,       0x04020400, // 11 = { 0, 4, 2, 4 }
+        0,       0x03ff0403, // 13 = { 3, 4, -1, 3 }
+        0, 0, 0, 0x01ff0801, // 17 = { 1, 8, -1, 1 }
+        0,       0x02060200  // 19 = { 0, 2, 6, 2 }
     };
 
     mpz_class u = sqrt(N) + 1;
@@ -192,17 +192,19 @@ FMMod20Precomp(
         u++;
     }
 
-    uint64_t r = mpz_fdiv_ui(N.get_mpz_t(), 20);
+    const uint64_t r = mpz_fdiv_ui(N.get_mpz_t(), 20);
+    const uint32_t dif = DIF_LUT[r];
 
     for (size_t i = 0; i < Max; i++)
     {
+        uint32_t d = dif;
         // Implement the cycle routine
-        for (size_t j = 0; j < 4; j++) {
-            if (dif[r][j] == -1) {
-                continue; // Skip invalid cycles
+        for (size_t j = 0; j < 4; j++, d >>= 8) {
+            if ((d & 0xff) == 0xff) {
+                continue;
             }
-            u += dif[r][j];
-            mpz_class b = (u * u) - N;
+            u += (d & 0xff);
+            const mpz_class b = (u * u) - N;
             if (mpz_perfect_square_p(b.get_mpz_t())) {
                 return std::make_pair(u - sqrt(b), u + sqrt(b));
             }
