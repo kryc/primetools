@@ -88,4 +88,57 @@ gcd(
     return result;
 }
 
+const mpz_class
+floor_div(
+    const mpz_class& A,
+    const mpz_class& B)
+{
+    mpz_class res;
+    mpz_fdiv_q(res.get_mpz_t(), A.get_mpz_t(), B.get_mpz_t());
+    return res;
+}
+
+const bool
+very_fast_prime_test(
+    const mpz_class& Candidate
+)
+{
+    const mpz_srcptr candidate = Candidate.get_mpz_t();
+
+    if (
+        mpz_divisible_ui_p(candidate, 3) ||
+        mpz_divisible_ui_p(candidate, 5) ||
+        mpz_divisible_ui_p(candidate, 7)
+    )
+    {
+        return false;
+    }
+
+    return true;
+}
+
+const bool
+fast_prime_test(
+    const mpz_class& Candidate
+)
+{
+    const mpz_srcptr candidate = Candidate.get_mpz_t();
+
+    if (very_fast_prime_test(Candidate) == false) {
+        return false; // Quick check for small primes
+    }
+
+    // Trial division with small primes
+    int small_primes[] = {11, 13, 17, 19, 23, 29};
+    for (int p : small_primes) {
+        if (mpz_divisible_ui_p(candidate, p))
+        {
+            return false;
+        }
+    }
+
+    // Perform a reduced Miller-Rabin test (only 5 rounds)
+    return mpz_probab_prime_p(candidate, 5) > 0;
+}
+
 }

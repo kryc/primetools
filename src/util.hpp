@@ -49,6 +49,22 @@ gcd(
     const mpz_class& B
 );
 
+const mpz_class
+floor_div(
+    const mpz_class& A,
+    const mpz_class& B
+);
+
+const bool
+very_fast_prime_test(
+    const mpz_class& Candidate
+);
+
+const bool
+fast_prime_test(
+    const mpz_class& Candidate
+);
+
 } // namespace primetools
 
 #endif

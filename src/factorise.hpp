@@ -8,6 +8,7 @@
 
 #include "fermat.hpp"
 #include "pollard.hpp"
+#include "shanks.hpp"
 
 namespace primetools {
 
@@ -27,6 +28,15 @@ FactoriseSmallPrimes(
 const std::optional<std::pair<mpz_class, mpz_class>>
 Factorise(
     const mpz_class& N
+);
+
+// Completely random candidate factor selection
+// This is not a recommended method for factorisation
+const std::optional<std::pair<mpz_class, mpz_class>>
+RandomPrimeFactorization(
+    const mpz_class& N,
+    const size_t Base = 1,
+    const size_t MaxIterations = std::numeric_limits<size_t>::max()
 );
 
 }

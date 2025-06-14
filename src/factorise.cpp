@@ -146,4 +146,54 @@ Factorise(
     return std::nullopt;
 }
 
+const std::optional<std::pair<mpz_class, mpz_class>>
+RandomPrimeFactorization(
+    const mpz_class& N,
+    const size_t Base,
+    const size_t MaxIterations
+)
+{
+    if (N < 2) {
+        return std::nullopt;
+    }
+
+    // Calculate the size of N's constituent primes
+    const size_t bits = mpz_sizeinbase(N.get_mpz_t(), 2) / 2;
+
+    std::cout << "Trying random factorization of primes of size " << bits << " bits." << std::endl;
+    std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
+    
+    // Calculate the lower and upper bounds for the prime factor
+    const mpz_class lower_bound = mpz_class(1) << (bits - 1);
+    const mpz_class upper_bound = (mpz_class(1) << bits);
+
+    // Calculate the difference between the bounds
+    const mpz_class diff = upper_bound - lower_bound;
+
+    // We now have a base offset that will bounce around the
+    // range of lower and upper bounds.
+    mpz_class base = Base;
+
+    for (size_t i = 0; i < MaxIterations; ++i) {
+        // Generate a random candidate prime
+        const mpz_class candidate = lower_bound + base;
+
+        // Check if the candidate is prime. We actually don't really care
+        // very much, we just want to weed out obvious non-primes (like multiples of 3 and 5)
+        if (primetools::very_fast_prime_test(candidate)) {
+            // Check if it divides N
+            if (mpz_divisible_p(N.get_mpz_t(), candidate.get_mpz_t())) {
+                return std::make_pair(candidate, N / candidate);
+            }
+        }
+
+        // Pseudorandomly adjust the base (2a + 1) % diff.
+        // The choice of (2a + 1) is arbitrary but ensures
+        // that base remains an odd.
+        base = ((2 * base) + 1) % diff;
+    }
+
+    return std::nullopt;
+}
+
 }

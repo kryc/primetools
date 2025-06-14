@@ -210,6 +210,50 @@ int main(
         auto result = primetools::PollardsPMinus1(n, bound);
         OutputFactors(result);
     }
+    else if (action == "squfof")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " squfof <number>" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+
+        auto result = primetools::SQUFOF(n);
+        OutputFactors(result);
+    }
+    else if (action == "random" || action == "fuckit")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " randomprimefactorization <number> [max_iterations]" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+
+        std::cout << "Random prime factorization of " << TruncateNumber(n) << std::endl;
+        
+        const size_t base = argc >= 4 ? std::stoul(argv[3]) : 1;
+        const size_t max_iterations = argc == 5 ? std::stoul(argv[4]) : std::numeric_limits<size_t>::max();
+
+        auto result = primetools::RandomPrimeFactorization(n, base, max_iterations);
+        OutputFactors(result);
+    }
+    else if (action == "findcloseprimes")
+    {
+        FindClosePrimes();
+    }
+    else if (action == "calculatefermatiterations")
+    {
+        if (argc != 3) {
+            std::cerr << "Usage: " << argv[0] << " calculatefermatiterations <number>" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        size_t iterations = primetools::CalculateFermatIterations(n);
+        std::cout << "Fermat iterations for " << TruncateNumber(n) << ": " << iterations << std::endl;
+    }
     else
     {
         std::cerr << "Unknown action: " << action << std::endl;
