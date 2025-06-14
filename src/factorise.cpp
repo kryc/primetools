@@ -1,14 +1,17 @@
 #include <iostream>
 #include <limits>
 #include <optional>
+#include <random>
 #include <span>
 #include <utility>
 
 #include <gmpxx.h>
 
+#include "analyse.hpp"
 #include "factorise.hpp"
 #include "fermat.hpp"
 #include "pollard.hpp"
+#include "random.hpp"
 
 namespace primetools {
 
@@ -158,7 +161,7 @@ RandomPrimeFactorization(
     }
 
     // Calculate the size of N's constituent primes
-    const size_t bits = mpz_sizeinbase(N.get_mpz_t(), 2) / 2;
+    const size_t bits = primetools::GuessSizeOfPrimeFactors(N, true);
 
     std::cout << "Trying random factorization of primes of size " << bits << " bits." << std::endl;
     std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
@@ -174,23 +177,22 @@ RandomPrimeFactorization(
     // range of lower and upper bounds.
     mpz_class base = Base;
 
+    // Set up our PRNG
+    primetools::MiniPRNG64 prng;
+
     for (size_t i = 0; i < MaxIterations; ++i) {
         // Generate a random candidate prime
         const mpz_class candidate = lower_bound + base;
 
-        // Check if the candidate is prime. We actually don't really care
-        // very much, we just want to weed out obvious non-primes (like multiples of 3 and 5)
-        if (primetools::very_fast_prime_test(candidate)) {
-            // Check if it divides N
-            if (mpz_divisible_p(N.get_mpz_t(), candidate.get_mpz_t())) {
-                return std::make_pair(candidate, N / candidate);
-            }
+        // Check if it divides N
+        if (mpz_divisible_p(N.get_mpz_t(), candidate.get_mpz_t())) {
+            return std::make_pair(candidate, N / candidate);
         }
 
         // Pseudorandomly adjust the base (2a + 1) % diff.
         // The choice of (2a + 1) is arbitrary but ensures
         // that base remains an odd.
-        base = ((2 * base) + 1) % diff;
+        base = (base + prng.NextEven()) % diff;
     }
 
     return std::nullopt;
