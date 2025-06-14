@@ -13,6 +13,8 @@ The main use of this project is in the building and solving of capture the flag 
 - [Fermat's factorisation method](https://en.wikipedia.org/wiki/Fermat's_factorization_method)
 - [Pollard's Rho](https://en.wikipedia.org/wiki/Pollard%27s_rho_algorithm)
 - [Brent-Pollards Rho](https://en.wikipedia.org/wiki/Pollard%27s_rho_algorithm#Variants)
+- [Shank's Square Forms Factorisation (SQUFOF)](https://en.wikipedia.org/wiki/Shanks%27s_square_forms_factorization)
+- [Random Trial Division](https://en.wikipedia.org/wiki/Trial_division)
 
 Note that although the original Pollard's Rho is implemented and working, Brent's improvements provide a roughly 24% speed improvement so this version is used as the default.
 
