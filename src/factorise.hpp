@@ -9,6 +9,7 @@
 #include "fermat.hpp"
 #include "pollard.hpp"
 #include "shanks.hpp"
+#include "trial_division.hpp"
 
 namespace primetools {
 
