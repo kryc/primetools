@@ -239,6 +239,32 @@ int main(
         auto result = primetools::TrialDivisionRandom(n, base, max_iterations);
         OutputFactors(result);
     }
+    else if (action == "wheel30")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " wheel30 <number> [max_iterations]" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+
+        auto result = primetools::TrialDivisionWheel30(n, max_iterations);
+        OutputFactors(result);
+    }
+    else if (action == "wheel210")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " wheel30 <number> [max_iterations]" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+
+        auto result = primetools::TrialDivisionWheel210(n, max_iterations);
+        OutputFactors(result);
+    }
     else if (action == "trialdivision" || action == "linear" || action == "trial" || action == "td")
     {
         if (argc < 3) {
@@ -251,6 +277,19 @@ int main(
         const size_t max_iterations = argc == 5 ? std::stoul(argv[4]) : std::numeric_limits<size_t>::max();
 
         auto result = primetools::TrialDivisionLinear(n, base, max_iterations);
+        OutputFactors(result);
+    }
+    else if (action == "bitflip")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " trialdivision <number> [max_iterations]" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 5 ? std::stoul(argv[4]) : std::numeric_limits<size_t>::max();
+
+        auto result = primetools::TrialDivisionBitflip(n, max_iterations);
         OutputFactors(result);
     }
     else if (action == "findcloseprimes")

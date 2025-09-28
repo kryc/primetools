@@ -53,7 +53,7 @@ TrialDivision(
         }
 
         if constexpr (Random) {
-            base = (base + prng.NextEven()) % diff;
+            base = (base + (unsigned long int)prng.NextEven()) % diff;
         } else {
             base = (base + 2) % diff;
         }
@@ -61,6 +61,24 @@ TrialDivision(
 
     return std::nullopt;
 }
+
+const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionBitflip(
+    const mpz_class& N,
+    const size_t MaxIterations
+);
+
+const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionWheel30(
+    const mpz_class& N,
+    const size_t MaxIterations
+);
+
+const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionWheel210(
+    const mpz_class& N,
+    const size_t MaxIterations
+);
 
 // Define template specializations for Random and Non-Random cases
 inline std::optional<std::pair<mpz_class, mpz_class>>

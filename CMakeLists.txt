@@ -5,7 +5,7 @@ project(primetools VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_COMPILER clang++ CACHE STRING "C++ compiler" FORCE)
 set(CMAKE_CXX_COMPILER clang++)
 
-set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_CXX_FLAGS "-Wall -Werror -Wno-unused-function -Wno-deprecated-declarations -Wno-c23-extensions")

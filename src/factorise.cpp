@@ -133,13 +133,13 @@ Factorise(
 
     // Try using Pollards P-1
     std::cout << "Trying Pollard's P-1 (B2**20)..." << std::endl;
-    result = PollardsPMinus1(N, (size_t)1 << 20);
+    result = PollardsPMinus1(N, (size_t)1 << 22);
     if (result) {
         return result;
     }
 
     // Use Pollard's rho algorithm
-    std::cout << "Trying Pollard's rho..." << std::endl;
+    std::cout << "Trying Brent-Pollard's rho..." << std::endl;
     result = BrentPollardsRho(N, std::numeric_limits<size_t>::max());
     if (result) {
         return result;
