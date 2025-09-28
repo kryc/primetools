@@ -80,6 +80,18 @@ TrialDivisionWheel210(
     const size_t MaxIterations
 );
 
+const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionWheel2310(
+    const mpz_class& N,
+    const size_t MaxIterations
+);
+
+const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionSimd(
+    const mpz_class& N,
+    const size_t MaxIterations
+);
+
 // Define template specializations for Random and Non-Random cases
 inline std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandom(const mpz_class& N, const size_t Base, const size_t MaxIterations) {

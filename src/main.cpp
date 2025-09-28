@@ -255,7 +255,7 @@ int main(
     else if (action == "wheel210")
     {
         if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " wheel30 <number> [max_iterations]" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " wheel210 <number> [max_iterations]" << std::endl;
             return 1;
         }
 
@@ -263,6 +263,32 @@ int main(
         const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
         auto result = primetools::TrialDivisionWheel210(n, max_iterations);
+        OutputFactors(result);
+    }
+    else if (action == "wheel2310")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " wheel2310 <number> [max_iterations]" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+
+        auto result = primetools::TrialDivisionWheel2310(n, max_iterations);
+        OutputFactors(result);
+    }
+    else if (action == "simd" || action == "simdtd" || action == "trialdivisionsimd")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " simd <number> [max_iterations]" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+
+        auto result = primetools::TrialDivisionSimd(n, max_iterations);
         OutputFactors(result);
     }
     else if (action == "trialdivision" || action == "linear" || action == "trial" || action == "td")
