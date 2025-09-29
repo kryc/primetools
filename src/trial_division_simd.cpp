@@ -3,7 +3,9 @@
 #include <iostream>
 #include <optional>
 
+#ifdef __AVX512F__
 #include <immintrin.h>
+#endif
 
 #include "trial_division.hpp"
 
@@ -16,7 +18,6 @@ TrialDivisionSimd(
 )
 {
 #ifdef __AVX512F__
-    
     if (N < 2) {
         return std::nullopt;
     }
@@ -78,6 +79,8 @@ TrialDivisionSimd(
         // Increment the candidates by the step
         candidates = _mm512_add_epi64(candidates, step);
     }
+#else
+    std::cerr << "SIMD trial division is not supported on this platform." << std::endl;
 #endif
     return std::nullopt;
 }
