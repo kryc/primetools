@@ -249,8 +249,17 @@ int main(
         const mpz_class n(argv[2]);
         const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
-        auto result = primetools::TrialDivisionWheel30(n, max_iterations);
-        OutputFactors(result);
+        if (n.fits_ulong_p())
+        {
+            auto result = primetools::TrialDivisionWheel30(n.get_ui(), max_iterations);
+            OutputFactors(result);
+        }
+        else
+        {
+            auto result = primetools::TrialDivisionWheel30(n, max_iterations);
+            OutputFactors(result);
+        }
+        
     }
     else if (action == "wheel210")
     {
@@ -262,8 +271,16 @@ int main(
         const mpz_class n(argv[2]);
         const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
-        auto result = primetools::TrialDivisionWheel210(n, max_iterations);
-        OutputFactors(result);
+                if (n.fits_ulong_p())
+        {
+            auto result = primetools::TrialDivisionWheel210(n.get_ui(), max_iterations);
+            OutputFactors(result);
+        }
+        else
+        {
+            auto result = primetools::TrialDivisionWheel210(n, max_iterations);
+            OutputFactors(result);
+        }
     }
     else if (action == "wheel2310")
     {
@@ -275,8 +292,16 @@ int main(
         const mpz_class n(argv[2]);
         const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
-        auto result = primetools::TrialDivisionWheel2310(n, max_iterations);
-        OutputFactors(result);
+        if (n.fits_ulong_p())
+        {
+            auto result = primetools::TrialDivisionWheel2310(n.get_ui(), max_iterations);
+            OutputFactors(result);
+        }
+        else
+        {
+            auto result = primetools::TrialDivisionWheel2310(n, max_iterations);
+            OutputFactors(result);
+        }
     }
     else if (action == "simd" || action == "simdtd" || action == "trialdivisionsimd")
     {
