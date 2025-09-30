@@ -11,12 +11,9 @@
 #include "factorise.hpp"
 #include "fermat.hpp"
 #include "pollard.hpp"
+#include "trial_division.hpp"
 
 namespace primetools {
-
-static const unsigned char g_Primes[] = {
-#embed "../rsrc/small_primes.bin"
-};
 
 const std::optional<std::pair<mpz_class, mpz_class>>
 FactorisePerfectSquare(
@@ -30,41 +27,6 @@ FactorisePerfectSquare(
     if (mpz_perfect_square_p(N.get_mpz_t())) {
         mpz_class sqrtN = sqrt(N);
         return std::make_pair(sqrtN, sqrtN);
-    }
-
-    return std::nullopt;
-}
-
-// Factorise against the list of the first 100,000 primes
-const std::optional<std::pair<mpz_class, mpz_class>>
-FactoriseSmallPrimes(
-    const mpz_class& N
-)
-{
-    if (N < 2) {
-        return std::nullopt;
-    }
-
-    unsigned long int prime = 0;
-
-    // primes_data is a vlq-encoded array of the differences between primes
-    for (size_t i = 0; i < sizeof(g_Primes);) {
-        // Decode vlq-encoded prime difference
-        size_t primediff = 0;
-        size_t shift = 0;
-        uint8_t byte;
-        do {
-            byte = g_Primes[i++];
-            primediff |= (byte & 0x7F) << shift;
-            shift += 7;
-        } while (i < sizeof(g_Primes) && (byte & 0x80) != 0);
-
-        prime += primediff;
-
-        if (mpz_divisible_ui_p(N.get_mpz_t(), prime)) {
-            mpz_class factor = N / prime;
-            return std::make_pair(mpz_class(prime), factor);
-        }
     }
 
     return std::nullopt;
@@ -94,55 +56,6 @@ FactorisePrimesInRange(
             return std::make_pair(prime, N / prime);
         }
         mpz_nextprime(prime.get_mpz_t(), prime.get_mpz_t());
-    }
-
-    return std::nullopt;
-}
-
-const std::optional<std::pair<mpz_class, mpz_class>>
-Factorise(
-    const mpz_class& N
-)
-{
-    if (N < 2) {
-        return std::nullopt;
-    }
-
-    // Check for perfect square
-    std::cout << "Checking for perfect square..." << std::endl;
-    auto result = FactorisePerfectSquare(N);
-    if (result) {
-        return result;
-    }
-
-    // Check for small prime factors
-    std::cout << "Checking small primes..." << std::endl;
-    result = FactoriseSmallPrimes(N);
-    if (result) {
-        return result;
-    }
-
-    // Use Fermat's factorization method up to 2^24 iterations
-    size_t iterations = CalculateFermatIterations(N);
-    iterations = std::min(iterations, (size_t)1 << 24);
-    std::cout << "Trying " << iterations << " iterations of FMMod20Precomp (Fermat) factorization..." << std::endl;
-    result = FMMod20Precomp(N, iterations);
-    if (result) {
-        return result;
-    }
-
-    // Try using Pollards P-1
-    std::cout << "Trying Pollard's P-1 (B2**20)..." << std::endl;
-    result = PollardsPMinus1(N, (size_t)1 << 22);
-    if (result) {
-        return result;
-    }
-
-    // Use Pollard's rho algorithm
-    std::cout << "Trying Brent-Pollard's rho..." << std::endl;
-    result = BrentPollardsRho(N, std::numeric_limits<size_t>::max());
-    if (result) {
-        return result;
     }
 
     return std::nullopt;
