@@ -303,6 +303,48 @@ int main(
             OutputFactors(result);
         }
     }
+    else if (action == "wheel30030")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " wheel30030 <number> [max_iterations]" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+
+        if (n.fits_ulong_p())
+        {
+            auto result = primetools::TrialDivisionWheel30030(n.get_ui(), max_iterations);
+            OutputFactors(result);
+        }
+        else
+        {
+            auto result = primetools::TrialDivisionWheel30030(n, max_iterations);
+            OutputFactors(result);
+        }
+    }
+    else if (action == "wheel510510")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " wheel510510 <number> [max_iterations]" << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(argv[2]);
+        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+
+        if (n.fits_ulong_p())
+        {
+            auto result = primetools::TrialDivisionWheel510510(n.get_ui(), max_iterations);
+            OutputFactors(result);
+        }
+        else
+        {
+            auto result = primetools::TrialDivisionWheel510510(n, max_iterations);
+            OutputFactors(result);
+        }
+    }
     else if (action == "simd" || action == "simdtd" || action == "trialdivisionsimd")
     {
         if (argc < 3) {
