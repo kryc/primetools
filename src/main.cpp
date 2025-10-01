@@ -9,42 +9,6 @@
 #include "factorise.hpp"
 #include "util.hpp"
 
-void
-FindClosePrimes(
-    void
-)
-{
-    mpz_class a, b;
-    mpz_class end;
-    mpz_class smallest, smallestdiff = 0;
-
-    // Set a to 2^1023
-    mpz_ui_pow_ui(a.get_mpz_t(), 2, 1023);
-
-    // Set end to 2^1024
-    mpz_ui_pow_ui(end.get_mpz_t(), 2, 1024);
-
-    // Set a to the first prime greater than 2^1023
-    mpz_nextprime(a.get_mpz_t(), a.get_mpz_t());
-
-    // Releatedly look for primes with the smallest distance
-    // between them
-    while (a < end) {
-        // Find the next prime
-        mpz_nextprime(b.get_mpz_t(), a.get_mpz_t());
-
-        // Check if the difference is smaller than the smallest
-        if (smallestdiff == 0 || (b - a) < smallestdiff) {
-            smallestdiff = b - a;
-            smallest = a;
-            std::cout << "Found a smaller pair of primes: "
-                      << smallest << ", " << b <<
-                      " (" << smallestdiff << ")" << std::endl;
-        }
-        a = b;
-    }
-}
-
 const std::string
 TruncateNumber(
     const mpz_class& Number,
@@ -94,10 +58,6 @@ int main(
 
         auto result = primetools::Factorise(n);
         OutputFactors(result);
-    }
-    else if (action == "findcloseprimes")
-    {
-        FindClosePrimes();
     }
     else if (action == "isprime")
     {
@@ -383,10 +343,6 @@ int main(
 
         auto result = primetools::TrialDivisionBitflip(n, max_iterations);
         OutputFactors(result);
-    }
-    else if (action == "findcloseprimes")
-    {
-        FindClosePrimes();
     }
     else if (action == "calculatefermatiterations")
     {
