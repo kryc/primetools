@@ -3,7 +3,11 @@
 
 namespace primetools {
 
-static const uint32_t WHEEL30GAPS = 0x26424246;
+// 30‑wheel gaps packed 16×4‑bit per 32‑bit word
+static const uint32_t WHEEL30GAPSUINT32 = 0x26424246;
+static const std::array<const uint64_t, 1> WHEEL30GAPS = {
+    0x0000000026424246ULL,
+};
 // 210‑wheel gaps packed 16×4‑bit per 64‑bit word
 static const std::array<const uint64_t, 3> WHEEL210GAPS = {
     0x462664246264242aULL, // gaps[0..15]

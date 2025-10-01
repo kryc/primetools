@@ -21,55 +21,8 @@ using Range = std::pair<const T, const T>;
 template <typename T>
 using RangeOrGuess = std::variant<const Range<T>, bool>;
 
-template <typename T>
-const std::optional<std::pair<mpz_class, mpz_class>>
-TrialDivisionWheel30(
-    const T& N,
-    const size_t MaxIterations,
-    const bool UseGuessSize = true
-)
-{
-    if (N < 2) {
-        return std::nullopt;
-    }
-    
-    // Calculate the size of N's constituent primes
-    const size_t bits = primetools::GuessSizeOfPrimeFactors(N, true);
-    
-    // Get the square root of N as this is our upper bound for trial division
-    const T lower_bound = UseGuessSize ? T(1) << (bits - 1) : T(1);
-    const T upper_bound = UseGuessSize ? (T(1) << bits) : T(sqrt(N));
-
-    T candidate = lower_bound;
-
-    // Cycle backwards until the candidate is congruent to 1 modulo 2310
-    while (candidate % 30 != 1 && candidate > 1) {
-        candidate -= 1;
-    }
-
-    std::cout << "Trying factorization of " << bits << "-bit primes below " << upper_bound <<
-        " using wheel30 factorization." << std::endl << "Starting candidate: " << candidate << std::endl;
-
-    uint32_t gapword = WHEEL30GAPS;
-
-    for (size_t i = 0; i < MaxIterations && candidate <= upper_bound; ++i)
-    {
-        if (primetools::divides(N, candidate) && candidate > 1) {
-            return std::make_pair(candidate, N / candidate);
-        }
-
-        // candidate += gap & 0xf;
-        primetools::increment(candidate, gapword & 0xf);
-
-        // Rotate the gaps
-        gapword = std::rotr(gapword, 4); // rotate by 4 bits
-    }
-
-    return std::nullopt;
-}
-
 template <typename T, const size_t Modulus, const size_t BitSize, const size_t Count, const std::array<const uint64_t, Count>& GapArray>
-const std::optional<std::pair<mpz_class, mpz_class>>
+static const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionWheel(
     const T& N,
     const RangeOrGuess<T>& RangeOrGuessSize = true
@@ -122,21 +75,42 @@ TrialDivisionWheel(
         " using wheel" << Modulus << " factorization." << std::endl;
     // std::cout << "Starting candidate: " << candidate << std::endl;
 
-    while (candidate <= upper_bound)
+    // Special case for wheel as we can use an optimization to rotate
+    // the gaps using a bit rotation. This also avoids a branch.
+    if constexpr (Modulus == 30)
     {
-        for (auto gapword : GapArray)
+        uint32_t gapword = WHEEL30GAPSUINT32;
+        while (candidate <= upper_bound)
         {
-            for (size_t index = 0; index < GapsPerWord; index++)
+            if (primetools::divides(N, candidate) && candidate > 1) {
+                return std::make_pair(candidate, N / candidate);
+            }
+
+            // candidate += gap & 0xf;
+            primetools::increment(candidate, gapword & 0xf);
+
+            // Rotate the gaps
+            gapword = std::rotr(gapword, 4); // rotate by 4 bits
+        }
+    }
+    else
+    {
+        while (candidate <= upper_bound)
+        {
+            for (auto gapword : GapArray)
             {
-                if (primetools::divides(N, candidate) && candidate > 1) {
-                    return std::make_pair(candidate, N / candidate);
+                for (size_t index = 0; index < GapsPerWord; index++)
+                {
+                    if (primetools::divides(N, candidate) && candidate > 1) {
+                        return std::make_pair(candidate, N / candidate);
+                    }
+
+                    // candidate += gap & 0x1f;
+                    primetools::increment(candidate, gapword & GapsMask);
+
+                    // Rotate the gaps
+                    gapword >>= BitSize; // shift by 5 bits
                 }
-
-                // candidate += gap & 0x1f;
-                primetools::increment(candidate, gapword & GapsMask);
-
-                // Rotate the gaps
-                gapword >>= BitSize; // shift by 5 bits
             }
         }
     }
@@ -194,6 +168,19 @@ static inline const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionWheel210(const T& N, const T StartValue, const T EndValue) {
     RangeOrGuess<T> RangeOrGuessSize = Range<T>{StartValue, EndValue};
     return TrialDivisionWheel<T, 210, 4, 3, WHEEL210GAPS>(N, RangeOrGuessSize);
+}
+
+template <typename T>
+static inline const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionWheel30(const T& N, const bool GuessSize = true) {
+    RangeOrGuess<T> RangeOrGuessSize = GuessSize;
+    return TrialDivisionWheel<T, 30, 4, 1, WHEEL30GAPS>(N, RangeOrGuessSize);
+}
+template <typename T>
+static inline const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionWheel30(const T& N, const T StartValue, const T EndValue) {
+    RangeOrGuess<T> RangeOrGuessSize = Range<T>{StartValue, EndValue};
+    return TrialDivisionWheel<T, 30, 4, 1, WHEEL30GAPS>(N, RangeOrGuessSize);
 }
 
 template <typename T>

@@ -207,16 +207,15 @@ int main(
         }
 
         const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
         if (n.fits_ulong_p())
         {
-            auto result = primetools::TrialDivisionWheel30(n.get_ui(), max_iterations);
+            auto result = primetools::TrialDivisionWheel30(n.get_ui());
             OutputFactors(result);
         }
         else
         {
-            auto result = primetools::TrialDivisionWheel30(n, max_iterations);
+            auto result = primetools::TrialDivisionWheel30(n);
             OutputFactors(result);
         }
         
@@ -229,16 +228,15 @@ int main(
         }
 
         const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
                 if (n.fits_ulong_p())
         {
-            auto result = primetools::TrialDivisionWheel210(n.get_ui(), max_iterations);
+            auto result = primetools::TrialDivisionWheel210(n.get_ui());
             OutputFactors(result);
         }
         else
         {
-            auto result = primetools::TrialDivisionWheel210(n, max_iterations);
+            auto result = primetools::TrialDivisionWheel210(n);
             OutputFactors(result);
         }
     }
@@ -250,16 +248,15 @@ int main(
         }
 
         const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
         if (n.fits_ulong_p())
         {
-            auto result = primetools::TrialDivisionWheel2310(n.get_ui(), max_iterations);
+            auto result = primetools::TrialDivisionWheel2310(n.get_ui());
             OutputFactors(result);
         }
         else
         {
-            auto result = primetools::TrialDivisionWheel2310(n, max_iterations);
+            auto result = primetools::TrialDivisionWheel2310(n);
             OutputFactors(result);
         }
     }
@@ -271,16 +268,15 @@ int main(
         }
 
         const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
         if (n.fits_ulong_p())
         {
-            auto result = primetools::TrialDivisionWheel30030(n.get_ui(), max_iterations);
+            auto result = primetools::TrialDivisionWheel30030(n.get_ui());
             OutputFactors(result);
         }
         else
         {
-            auto result = primetools::TrialDivisionWheel30030(n, max_iterations);
+            auto result = primetools::TrialDivisionWheel30030(n);
             OutputFactors(result);
         }
     }
