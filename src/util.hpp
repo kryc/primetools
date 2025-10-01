@@ -4,6 +4,9 @@
 #include <bit>
 #include <cmath>
 #include <stdexcept>
+#include <string>
+#include <string_view>
+
 #include <stdint.h>
 #include <gmp.h>
 #include <gmpxx.h>
@@ -134,6 +137,65 @@ increment(
 }
 
 static inline void
+decrement(
+    mpz_class& Value,
+    const mpz_class& Amount = 1
+)
+{
+    mpz_sub(Value.get_mpz_t(), Value.get_mpz_t(), Amount.get_mpz_t());
+}
+
+static inline void
+decrement(
+    mpz_class& Value,
+    const uint64_t Amount = 1
+)
+{
+    mpz_sub_ui(Value.get_mpz_t(), Value.get_mpz_t(), Amount);
+}
+
+static inline void
+decrement(
+    mpz_class& Value,
+    const uint32_t Amount = 1
+)
+{
+    mpz_sub_ui(Value.get_mpz_t(), Value.get_mpz_t(), Amount);
+}
+
+// Cover all basic types
+template <typename T1, typename T2>
+static inline void
+decrement(
+    T1& Value,
+    const T2 Amount = 1
+)
+{
+    Value += Amount;
+}
+
+template <typename T>
+static inline T
+modulo(
+    mpz_class& A,
+    const T M
+)
+{
+    return mpz_fdiv_ui(A.get_mpz_t(), M);
+}
+
+template <typename T1, typename T2>
+static inline T2
+modulo(
+    T1& A,
+    const T2 M
+)
+{
+    A %= M;
+}
+
+
+static inline void
 toggle_bit(
     mpz_class& Value,
     const size_t Bit
@@ -170,6 +232,11 @@ bit_size(
 {
     return std::bit_width(Value);
 }
+
+const bool
+is_numeric(
+    const std::string_view Str
+);
 
 } // namespace primetools
 

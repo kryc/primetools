@@ -1,10 +1,10 @@
+#include <iostream>
+#include <limits>
+#include <map>
+#include <string>
 
 #include <stdint.h>
 #include <gmpxx.h>
-
-#include <limits>
-#include <iostream>
-#include <string>
 
 #include "factorise.hpp"
 #include "util.hpp"
@@ -23,9 +23,10 @@ TruncateNumber(
     return str.substr(0, StartDigits) + "..." + str.substr(str.length() - EndDigits);
 }
 
+template <typename T>
 void
 OutputFactors(
-    const std::optional<std::pair<mpz_class, mpz_class>>& Factors
+    const std::optional<std::pair<T, T>>& Factors
 )
 {
     if (Factors) {
@@ -45,7 +46,32 @@ int main(
         return 1;
     }
 
-    std::string action = argv[1];
+    std::map<std::string, std::string> flags;
+    std::vector<std::string> positionals;
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg.rfind("--", 0) == 0) {
+            size_t eq_pos = arg.find('=');
+            if (eq_pos != std::string::npos) {
+                std::string key = arg.substr(2, eq_pos - 2);
+                std::string value = arg.substr(eq_pos + 1);
+                flags[key] = value;
+            } else {
+                std::string key = arg.substr(2);
+                flags[key] = "true";
+            }
+        } else {
+            positionals.push_back(arg);
+        }
+    }
+
+    if (positionals.size() < 1) {
+        std::cerr << "No action specified." << std::endl;
+        return 1;
+    }
+
+    const std::string action = positionals[0];
 
     if (action == "factorise" || action == "factorize")
     {
@@ -54,119 +80,95 @@ int main(
             return 1;
         }
 
-        const mpz_class n(argv[2]);
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(positionals[1]);
 
         auto result = primetools::Factorise(n);
         OutputFactors(result);
     }
-    else if (action == "isprime")
-    {
-        if (argc != 3) {
-            std::cerr << "Usage: " << argv[0] << " isprime <number>" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-
-        bool is_prime = primetools::isprime(n);
-        std::cout << TruncateNumber(n) << (is_prime ? " is prime." : " is not prime.") << std::endl;
-    }
     else if (action == "fermat")
     {
         if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " fermat <number> [--fermat|--ffa|--mffv2|--mffv4] [--max-iterations=<max>]" << std::endl;
             return 1;
         }
 
-        const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
 
-        std::cout << "Fermat factorization of " << TruncateNumber(n) << std::endl;
+        const mpz_class n(positionals[1]);
+        const size_t max = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
+        const bool fermat = flags.find("fermat") != flags.end() || flags.find("ffa") != flags.end();
+        const bool mffv2 = flags.find("mffv2") != flags.end();
+        const bool mffv4 = flags.find("mffv4") != flags.end();
 
-        auto result = primetools::FermatFactorisation(n, 0, max_iterations);
-        OutputFactors(result);
+        if (fermat) {
+            std::cout << "Using standard Fermat factorization of " << TruncateNumber(n) << std::endl;
+            auto result = primetools::FermatFactorisation(n, 0, max);
+            OutputFactors(result);
+        }
+        else if (mffv2) {
+            std::cout << "Using Fermat Factorization Algorithm 2 of " << TruncateNumber(n) << std::endl;
+            auto result = primetools::FermatFactorisationAlgorithm2(n, max);
+            OutputFactors(result);
+        }
+        else if (mffv4) {
+            std::cout << "Using Modified Fermat Factorization V4 of " << TruncateNumber(n) << std::endl;
+            auto result = primetools::ModifiedFermatFactorisation4(n, max);
+            OutputFactors(result);
+        }
+        else {
+            std::cout << "Using FMMod20Precomp of " << TruncateNumber(n) << std::endl;
+            auto result = primetools::FMMod20Precomp(n, max);
+            OutputFactors(result);
+        }
     }
-    else if (action == "fermat2" || action == "ffa2")
+    else if (action == "rho")
     {
         if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " rho <number> [--pollard]" << std::endl;
             return 1;
         }
 
-        const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
 
-        std::cout << "Fermat factorization of " << TruncateNumber(n) << " using FFA-2" << std::endl;
+        const mpz_class n(positionals[1]);
+        const bool pollard = flags.find("pollard") != flags.end();
 
-        auto result = primetools::FermatFactorisationAlgorithm2(n, max_iterations);
-        OutputFactors(result);
+        if (pollard) {
+            std::cout << "Pollard's rho factorization of " << TruncateNumber(n) << std::endl;
+            auto result = primetools::PollardsRho(n);
+            OutputFactors(result);
+        }
+        else {
+            std::cout << "Brent-Pollard's rho factorization of " << TruncateNumber(n) << std::endl;
+            auto result = primetools::BrentPollardsRho(n);
+            OutputFactors(result);
+        }
     }
-    else if (action == "fermat4" || action == "mffv4")
+    else if (action == "pminus1" || action == "p-1" || action == "pollardp1" || action == "p1" || action == "pollardp-1")
     {
         if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " fermat <number>" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " pminus1 <number> <bound>" << std::endl;
             return 1;
         }
 
-        const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
-
-        std::cout << "Fermat factorization of " << TruncateNumber(n) << " using MFFV4" << std::endl;
-
-        auto result = primetools::ModifiedFermatFactorisation4(n, max_iterations);
-        OutputFactors(result);
-    }
-    else if (action == "fmmod20pc")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " fmmod20pc <number>" << std::endl;
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
             return 1;
         }
 
-        const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
-
-        std::cout << "Fermat factorization of " << TruncateNumber(n) << " using FMMod20Precomp" << std::endl;
-
-        auto result = primetools::FMMod20Precomp(n, max_iterations);
-        OutputFactors(result);
-    }
-    else if (action == "pollardsrho")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " pollardsrho <number>" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-
-        std::cout << "Pollard's rho factorization of " << TruncateNumber(n) << std::endl;
-
-        auto result = primetools::PollardsRho(n);
-        OutputFactors(result);
-    }
-    else if (action == "brentpollardsrho")
-    {
-        if (argc != 3) {
-            std::cerr << "Usage: " << argv[0] << " brentpollardsrho <number>" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-
-        auto result = primetools::BrentPollardsRho(n);
-        OutputFactors(result);
-    }
-    else if (action == "pollardp1")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " pollardp1 <number> <bound>" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-        const size_t bound = argc == 4 ? std::stoul(argv[3]) : (size_t)1 << 20;
-
+        const mpz_class n(positionals[1]);
+        const size_t bound = positionals.size() >= 3 ? std::stoul(positionals[2]) : (1 << 20);
         auto result = primetools::PollardsPMinus1(n, bound);
         OutputFactors(result);
     }
@@ -177,155 +179,80 @@ int main(
             return 1;
         }
 
-        const mpz_class n(argv[2]);
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
 
+        const mpz_class n(positionals[1]);
         auto result = primetools::SQUFOF(n);
         OutputFactors(result);
     }
-    else if (action == "random" || action == "fuckit")
+    else if (action == "random")
     {
         if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " randomprimefactorization <number> [max_iterations]" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " random <number> [max_iterations]" << std::endl;
             return 1;
         }
 
-        const mpz_class n(argv[2]);
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(positionals[1]);
+        const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"]) : mpz_class(1);
+        const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"]) : mpz_class(0);
+        const bool noguess = flags.find("no-guess") != flags.end();
+        const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
 
         std::cout << "Random prime factorization of " << TruncateNumber(n) << std::endl;
-        
-        const size_t base = argc >= 4 ? std::stoul(argv[3]) : 1;
-        const size_t max_iterations = argc == 5 ? std::stoul(argv[4]) : std::numeric_limits<size_t>::max();
 
-        auto result = primetools::TrialDivisionRandom(n, base, max_iterations);
+        auto result = primetools::TrialDivisionRandom(n, !noguess, bits, {start, end});
         OutputFactors(result);
     }
-    else if (action == "wheel30")
+    else if (action == "trial" || action == "wheel" || action == "trialdivision" || action == "td")
     {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " wheel30 <number> [max_iterations]" << std::endl;
+        // Check and get the number to factor
+        if (positionals.size() < 2) {
+            std::cerr << "Usage: " << argv[0] << " trial <number> [--modulus=<modulus>] [--no-guess] [--bits=<bits>] [--start=<start>] [--end=<end>] [--simd] [--use-simd] [--max-iterations=<max>]" << std::endl;
             return 1;
         }
 
-        const mpz_class n(argv[2]);
-
-        if (n.fits_ulong_p())
-        {
-            auto result = primetools::TrialDivisionWheel30(n.get_ui());
-            OutputFactors(result);
-        }
-        else
-        {
-            auto result = primetools::TrialDivisionWheel30(n);
-            OutputFactors(result);
-        }
-        
-    }
-    else if (action == "wheel210")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " wheel210 <number> [max_iterations]" << std::endl;
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
             return 1;
         }
 
-        const mpz_class n(argv[2]);
+        // Check if the user specified a modulus
+        size_t modulus = 510510; // Default to 510510
+        if (flags.find("modulus") != flags.end() || flags.find("wheel") != flags.end()) {
+            modulus = flags.find("modulus") != flags.end() ? std::stoul(flags["modulus"]) : std::stoul(flags["wheel"]);
+        }
 
-                if (n.fits_ulong_p())
-        {
-            auto result = primetools::TrialDivisionWheel210(n.get_ui());
+        const mpz_class n(positionals[1]);
+        const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"]) : mpz_class(1);
+        const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"]) : mpz_class(0);
+        const bool noguess = flags.find("no-guess") != flags.end();
+        const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
+        const bool simd = flags.find("simd") != flags.end() || flags.find("use-simd") != flags.end();
+
+        if (simd) {
+            const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
+            auto result = primetools::TrialDivisionSimd(n, max_iterations);
             OutputFactors(result);
         }
-        else
-        {
-            auto result = primetools::TrialDivisionWheel210(n);
-            OutputFactors(result);
+        else {
+            if (n.fits_ulong_p()) {
+                auto result = primetools::TrialDivision<uint64_t>(n.get_ui(), modulus, !noguess, bits, start.get_ui(), end.get_ui());
+                OutputFactors(result);
+            }
+            else
+            {
+                auto result = primetools::TrialDivision<mpz_class>(n, modulus, !noguess, bits, start, end);
+                OutputFactors(result);
+            }  
         }
-    }
-    else if (action == "wheel2310")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " wheel2310 <number> [max_iterations]" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-
-        if (n.fits_ulong_p())
-        {
-            auto result = primetools::TrialDivisionWheel2310(n.get_ui());
-            OutputFactors(result);
-        }
-        else
-        {
-            auto result = primetools::TrialDivisionWheel2310(n);
-            OutputFactors(result);
-        }
-    }
-    else if (action == "wheel30030")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " wheel30030 <number> [max_iterations]" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-
-        if (n.fits_ulong_p())
-        {
-            auto result = primetools::TrialDivisionWheel30030(n.get_ui());
-            OutputFactors(result);
-        }
-        else
-        {
-            auto result = primetools::TrialDivisionWheel30030(n);
-            OutputFactors(result);
-        }
-    }
-    else if (action == "wheel510510")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " wheel510510 <number> [min] [max]" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-
-        if (n.fits_ulong_p())
-        {
-            auto result = primetools::TrialDivisionWheel510510(n.get_ui());
-            OutputFactors(result);
-        }
-        else
-        {
-            auto result = primetools::TrialDivisionWheel510510(n);
-            OutputFactors(result);
-        }
-    }
-    else if (action == "simd" || action == "simdtd" || action == "trialdivisionsimd")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " simd <number> [max_iterations]" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
-
-        auto result = primetools::TrialDivisionSimd(n, max_iterations);
-        OutputFactors(result);
-    }
-    else if (action == "trialdivision" || action == "linear" || action == "trial" || action == "td")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " trialdivision <number> [base] [max_iterations]" << std::endl;
-            return 1;
-        }
-
-        const mpz_class n(argv[2]);
-        const size_t base = argc >= 4 ? std::stoul(argv[3]) : 1;
-        const size_t max_iterations = argc == 5 ? std::stoul(argv[4]) : std::numeric_limits<size_t>::max();
-
-        auto result = primetools::TrialDivisionLinear(n, base, max_iterations);
-        OutputFactors(result);
     }
     else if (action == "bitflip")
     {
@@ -334,11 +261,33 @@ int main(
             return 1;
         }
 
-        const mpz_class n(argv[2]);
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(positionals[1]);
         const size_t max_iterations = argc == 5 ? std::stoul(argv[4]) : std::numeric_limits<size_t>::max();
 
         auto result = primetools::TrialDivisionBitflip(n, max_iterations);
         OutputFactors(result);
+    }
+    else if (action == "isprime")
+    {
+        if (argc != 3) {
+            std::cerr << "Usage: " << argv[0] << " isprime <number>" << std::endl;
+            return 1;
+        }
+
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(positionals[1]);
+
+        bool is_prime = primetools::isprime(n);
+        std::cout << TruncateNumber(n) << (is_prime ? " is prime." : " is not prime.") << std::endl;
     }
     else if (action == "calculatefermatiterations")
     {
@@ -347,7 +296,12 @@ int main(
             return 1;
         }
 
-        const mpz_class n(argv[2]);
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(positionals[1]);
         size_t iterations = primetools::CalculateFermatIterations(n);
         std::cout << "Fermat iterations for " << TruncateNumber(n) << ": " << iterations << std::endl;
     }

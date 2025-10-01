@@ -141,4 +141,22 @@ fast_prime_test(
     return mpz_probab_prime_p(candidate, 5) > 0;
 }
 
+const bool
+is_numeric(
+    const std::string_view Str
+)
+{
+    if (Str.empty()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < Str.size(); ++i) {
+        if (!std::isdigit(Str[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 }
