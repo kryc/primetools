@@ -327,21 +327,20 @@ int main(
     else if (action == "wheel510510")
     {
         if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " wheel510510 <number> [max_iterations]" << std::endl;
+            std::cerr << "Usage: " << argv[0] << " wheel510510 <number> [min] [max]" << std::endl;
             return 1;
         }
 
         const mpz_class n(argv[2]);
-        const size_t max_iterations = argc == 4 ? std::stoul(argv[3]) : std::numeric_limits<size_t>::max();
 
         if (n.fits_ulong_p())
         {
-            auto result = primetools::TrialDivisionWheel510510(n.get_ui(), max_iterations);
+            auto result = primetools::TrialDivisionWheel510510(n.get_ui());
             OutputFactors(result);
         }
         else
         {
-            auto result = primetools::TrialDivisionWheel510510(n, max_iterations);
+            auto result = primetools::TrialDivisionWheel510510(n);
             OutputFactors(result);
         }
     }

@@ -39,7 +39,7 @@ Factorise(
 
     // Check for small prime factors
     std::cout << "Checking small primes..." << std::endl;
-    result = TrialDivisionWheel510510(N, 1000000, false);
+    result = TrialDivisionWheel510510(N, T(1), T(1 << 28));
     if (result) {
         return result;
     }
