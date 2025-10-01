@@ -219,7 +219,7 @@ TrialDivisionBitflip(
     return std::nullopt;
 };
 
-template <typename T, size_t BitSize = 5, size_t Modulus = 2310, size_t Count = 30, const std::array<const uint64_t, Count>& GapArray = WHEEL2310GAPS>
+template <typename T, size_t BitSize = 5, size_t Modulus = 510510, size_t Count = 7680, const std::array<const uint64_t, Count>& GapArray = WHEEL510510GAPS>
 const std::optional<std::pair<T, T>>
 TrialDivisionRandom(
     const T& N,
@@ -228,6 +228,9 @@ TrialDivisionRandom(
     const Range<T>& Range = {T(0), T(0)}
 )
 {
+    constexpr size_t GapsPerWord = 64 / BitSize;
+    constexpr uint64_t GapsMask = (1 << BitSize) - 1;
+
     if (N < 2) {
         return std::nullopt;
     }
@@ -269,17 +272,17 @@ TrialDivisionRandom(
         T candidate = lower_bound + base + 1;
 
         for (uint64_t gaps : GapArray) {
-            for (size_t index = 0; index < 64 / BitSize; index++) {
+            for (size_t index = 0; index < GapsPerWord; index++) {
                 // Check if it divides N
                 if (primetools::divides(N, candidate)) {
                     return std::make_pair(candidate, N / candidate);
                 }
 
                 // candidate += gap & 0x1f;
-                primetools::increment(candidate, gaps & 0x1f);
+                primetools::increment(candidate, gaps & GapsMask);
 
                 // Rotate the gaps
-                gaps >>= 5; // shift by 5 bits
+                gaps >>= BitSize; // shift by BitSize bits
             }
         }
         
