@@ -98,14 +98,14 @@ divides(
     return (N % Value) == 0;
 }
 
-static inline void
-increment(
-    mpz_class& Value,
-    const mpz_class& Amount = 1
-)
-{
-    mpz_add(Value.get_mpz_t(), Value.get_mpz_t(), Amount.get_mpz_t());
-}
+// static inline void
+// increment(
+//     mpz_class& Value,
+//     const mpz_class& Amount = 1
+// )
+// {
+//     mpz_add(Value.get_mpz_t(), Value.get_mpz_t(), Amount.get_mpz_t());
+// }
 
 static inline void
 increment(
@@ -126,11 +126,11 @@ increment(
 }
 
 // Cover all basic types
-template <typename T1, typename T2>
+template <typename T>
 static inline void
 increment(
-    T1& Value,
-    const T2 Amount = 1
+    uint64_t& Value,
+    const T Amount = 1
 )
 {
     Value += Amount;
@@ -174,25 +174,24 @@ decrement(
     Value += Amount;
 }
 
-template <typename T>
-static inline T
+static inline uint64_t
 modulo(
-    mpz_class& A,
-    const T M
+    const mpz_class& A,
+    const uint64_t M
 )
 {
     return mpz_fdiv_ui(A.get_mpz_t(), M);
 }
 
-template <typename T1, typename T2>
-static inline T2
-modulo(
-    T1& A,
-    const T2 M
-)
-{
-    A %= M;
-}
+// template <typename T1, typename T2>
+// static inline T2
+// modulo(
+//     T1& A,
+//     const T2 M
+// )
+// {
+//     A %= M;
+// }
 
 
 static inline void

@@ -18,7 +18,7 @@ namespace primetools {
 template <typename T>
 using Range = std::pair<const T, const T>;
 
-template <typename T, const size_t Modulus, const size_t BitSize, const size_t Count, const std::array<const uint64_t, Count>& GapArray>
+template <typename T, const size_t Modulus, const size_t BitSize, const size_t Count, const std::array<const uint64_t, Count>& GapArray, const bool IsMT = false>
 static const std::optional<std::pair<T, T>>
 TrialDivisionWheelInternal(
     const T& N,
@@ -36,19 +36,18 @@ TrialDivisionWheelInternal(
 
     const size_t bits = Bits != 0 ? Bits : (GuessSize ? primetools::GuessSizeOfPrimeFactors(N, true) : primetools::bit_size(N));
     T lower_bound = GuessSize ? (T(1) << (bits - 1)) + Range.first : Range.first;
-    T upper_bound;
-    if (Range.second == T(0)) {
-        upper_bound = GuessSize ? T(1) << bits : N;
-    } else {
-        upper_bound = GuessSize ? lower_bound + Range.second : Range.second;
-    }
+    mpz_class upper_bound = (Range.second == 0) 
+        ? (GuessSize ? T(1) << bits : T(sqrt(N))) 
+        : (GuessSize ? lower_bound + Range.second : Range.second);
 
-    if (GuessSize) {
-        std::cout << "Trying factorization of " << bits << "-bit primes below " << upper_bound <<
-            " using wheel" << Modulus << " factorization." << std::endl;
+    if constexpr (IsMT) {
+        if (GuessSize) {
+            std::cout << "Trying factorization of " << bits << "-bit primes below " << upper_bound <<
+                " using wheel" << Modulus << " factorization." << std::endl;
+        }
+        std::cout << "Trying factorization of primes in range [" << lower_bound << ", " << upper_bound <<
+            "] using wheel" << Modulus << " factorization." << std::endl;
     }
-    std::cout << "Trying factorization of primes in range [" << lower_bound << ", " << upper_bound <<
-        "] using wheel" << Modulus << " factorization." << std::endl;
 
     T candidate = lower_bound;
 
@@ -58,15 +57,13 @@ TrialDivisionWheelInternal(
         candidate += 1;
     }
     // Then scan forwards until candidate % Modulus == 1
-    while (candidate % Modulus != 1 && candidate > 1) {
+    while (primetools::modulo(candidate, Modulus) != 1 && candidate > 1) {
         // Check if we found a factor
         if (primetools::divides(N, candidate) && candidate > 1) {
             return std::make_pair(candidate, N / candidate);
         }
         candidate += 2;
     }
-
-    // std::cout << "Starting candidate: " << candidate << std::endl;
 
     // Special case for wheel as we can use an optimization to rotate
     // the gaps using a bit rotation. This also avoids a branch.
@@ -79,11 +76,9 @@ TrialDivisionWheelInternal(
                 return std::make_pair(candidate, N / candidate);
             }
 
-            // candidate += gap & 0xf;
             primetools::increment(candidate, gapword & 0xf);
 
-            // Rotate the gaps
-            gapword = std::rotr(gapword, 4); // rotate by 4 bits
+            gapword = std::rotr(gapword, 4);
         }
     }
     else
@@ -98,11 +93,9 @@ TrialDivisionWheelInternal(
                         return std::make_pair(candidate, N / candidate);
                     }
 
-                    // candidate += gap & 0x1f;
                     primetools::increment(candidate, gapword & GapsMask);
 
-                    // Rotate the gaps
-                    gapword >>= BitSize; // shift by 5 bits
+                    gapword >>= BitSize;
                 }
             }
         }
@@ -111,42 +104,49 @@ TrialDivisionWheelInternal(
     return std::nullopt;
 }
 
-template <typename T>
+template <typename T, const bool IsMT = false>
+static inline const std::optional<std::pair<T, T>>
+TrialDivisionWheel9699690(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
+    Range<T> RangeValue = Range<T>{StartValue, EndValue};
+    return TrialDivisionWheelInternal<T, 9699690, 6, 165888, WHEEL9699690GAPS, IsMT>(N, GuessSize, Bits, RangeValue);
+}
+
+template <typename T, const bool IsMT = false>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel510510(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
     Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 510510, 5, 7680, WHEEL510510GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 510510, 5, 7680, WHEEL510510GAPS, IsMT>(N, GuessSize, Bits, RangeValue);
 }
 
-template <typename T>
+template <typename T, const bool IsMT = false>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel30030(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
     Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 30030, 5, 480, WHEEL30030GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 30030, 5, 480, WHEEL30030GAPS, IsMT>(N, GuessSize, Bits, RangeValue);
 }
 
-template <typename T>
+template <typename T, const bool IsMT = false>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel2310(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
     Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 2310, 4, 30, WHEEL2310GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 2310, 4, 30, WHEEL2310GAPS, IsMT>(N, GuessSize, Bits, RangeValue);
 }
 
-template <typename T>
+template <typename T, const bool IsMT = false>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel210(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
     Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 210, 4, 3, WHEEL210GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 210, 4, 3, WHEEL210GAPS, IsMT>(N, GuessSize, Bits, RangeValue);
 }
 
-template <typename T>
+template <typename T, const bool IsMT = false>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel30(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
     Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 30, 4, 1, WHEEL30GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 30, 4, 1, WHEEL30GAPS, IsMT>(N, GuessSize, Bits, RangeValue);
 }
 
-template <typename T>
+template <typename T, const bool IsMT = false>
 static const std::optional<std::pair<T, T>>
 TrialDivision(
     const T& N,
@@ -158,6 +158,8 @@ TrialDivision(
 )
 {
     switch(Modulus) {
+        case 9699690:
+            return TrialDivisionWheel9699690<T, IsMT>(N, GuessSize, Bits, StartValue, EndValue);
         case 510510:
             return TrialDivisionWheel510510<T>(N, GuessSize, Bits, StartValue, EndValue);
         case 30030:
@@ -313,6 +315,16 @@ inline std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionLinear(const T& N, const size_t Base, const size_t MaxIterations) {
     return TrialDivisionWheel510510<T>(N, MaxIterations);
 }
+
+const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionMT(
+    const mpz_class& N,
+    const size_t Threads = 0,
+    const bool GuessSize = true,
+    const size_t Bits = 0,
+    const Range<mpz_class>& Range = {mpz_class(0), mpz_class(0)},
+    const size_t Modulus = 510510
+);
 
 const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandomMT(

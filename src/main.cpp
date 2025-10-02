@@ -243,10 +243,15 @@ int main(
         const bool noguess = flags.find("no-guess") != flags.end();
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
         const bool simd = flags.find("simd") != flags.end() || flags.find("use-simd") != flags.end();
+        const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
 
         if (simd) {
             const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
             auto result = primetools::TrialDivisionSimd(n, max_iterations);
+            OutputFactors(result);
+        }
+        else if (threads == 0 || threads > 1) {
+            auto result = primetools::TrialDivisionMT(n, threads, !noguess, bits, {0,0}, modulus);
             OutputFactors(result);
         }
         else {
