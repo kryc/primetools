@@ -219,14 +219,15 @@ TrialDivisionBitflip(
     return std::nullopt;
 };
 
-template <size_t BitSize = 5, size_t Modulus = 510510, size_t Count = 7680, const std::array<const uint64_t, Count>& GapArray = WHEEL510510GAPS>
+template <size_t BitSize = 5, size_t Modulus = 510510, size_t Count = 7680, const std::array<const uint64_t, Count>& GapArray = WHEEL510510GAPS, const bool IsMT = false>
 const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandom(
     const mpz_class& N,
     const bool GuessSize = true,
     const size_t Bits = 0,
     const Range<mpz_class>& Range = {mpz_class(0), mpz_class(0)},
-    const uint64_t Seed = 0
+    const uint64_t Seed = 0,
+    const size_t MaxIterations = std::numeric_limits<size_t>::max()
 )
 {
     constexpr size_t GapsPerWord = 64 / BitSize;
@@ -262,8 +263,10 @@ TrialDivisionRandom(
     // Calculate the number of blocks
     mpz_class blocks = diff / Modulus;
 
-    std::cout << "Trying random factorization of primes of size " << bits << " bits. " << blocks << " blocks." << std::endl;
-    std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
+    if constexpr (!IsMT) {
+        std::cout << "Trying random factorization of primes of size " << bits << " bits. " << blocks << " blocks." << std::endl;
+        std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
+    }
 
     gmp_randstate_t state;
     gmp_randinit_default(state);
@@ -272,7 +275,7 @@ TrialDivisionRandom(
     mpz_class block;
     mpz_urandomm(block.get_mpz_t(), state, blocks.get_mpz_t());
 
-    for (;;) {
+    for (size_t i = 0; i < MaxIterations; i++) {
         // Generate a random candidate prime at the start of the block
         mpz_class candidate = lower_bound + (block * Modulus) + 1;
 
@@ -310,6 +313,15 @@ inline std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionLinear(const T& N, const size_t Base, const size_t MaxIterations) {
     return TrialDivisionWheel510510<T>(N, MaxIterations);
 }
+
+const std::optional<std::pair<mpz_class, mpz_class>>
+TrialDivisionRandomMT(
+    const mpz_class& N,
+    const size_t Threads = 0,
+    const bool GuessSize = true,
+    const size_t Bits = 0,
+    const Range<mpz_class>& Range = {mpz_class(0), mpz_class(0)}
+);
 
 } // namespace primetools
 

@@ -205,11 +205,18 @@ int main(
         const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"]) : mpz_class(0);
         const bool noguess = flags.find("no-guess") != flags.end();
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
+        const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
 
         std::cout << "Random prime factorization of " << TruncateNumber(n) << std::endl;
 
-        auto result = primetools::TrialDivisionRandom(n, !noguess, bits, {start, end});
-        OutputFactors(result);
+        if (threads == 0 || threads > 1) {
+            auto result = primetools::TrialDivisionRandomMT(n, threads, !noguess, bits, {start, end});
+            OutputFactors(result);
+        }
+        else {
+            auto result = primetools::TrialDivisionRandom(n, !noguess, bits, {start, end});
+            OutputFactors(result);
+        }
     }
     else if (action == "trial" || action == "wheel" || action == "trialdivision" || action == "td")
     {
