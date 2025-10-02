@@ -245,9 +245,6 @@ TrialDivisionRandom(
         upper_bound = GuessSize ? lower_bound + Range.second : Range.second;
     }
 
-    std::cout << "Trying random factorization of primes of size " << bits << " bits." << std::endl;
-    std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
-
     // Step back lower_bound to be a multiple of Modulus
     if (lower_bound % Modulus != 0) {
         lower_bound -= (lower_bound % Modulus);
@@ -261,16 +258,26 @@ TrialDivisionRandom(
     // Calculate the difference between the bounds
     T diff = upper_bound - lower_bound;
 
-    // We will now randomly select Modulus-sized blocks within this range
-    T base = 0;
+    // Calculate the number of blocks
+    T blocks = diff / Modulus;
+
+    std::cout << "Trying random factorization of primes of size " << bits << " bits. " << blocks << " blocks." << std::endl;
+    std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
 
     // Set up our PRNG
     primetools::MiniPRNG64 prng;
 
-    for (;;) {
-        // Generate a random candidate prime
-        T candidate = lower_bound + base + 1;
+    gmp_randstate_t state;
+    gmp_randinit_default(state);
 
+    T block((unsigned long)prng.Next());
+    block %= blocks;
+
+    for (;;) {
+        // Generate a random candidate prime at the start of the block
+        T candidate = lower_bound + (block * 510510) + 1;
+
+        // Try wheel factorization within of the block
         for (uint64_t gaps : GapArray) {
             for (size_t index = 0; index < GapsPerWord; index++) {
                 // Check if it divides N
@@ -287,10 +294,14 @@ TrialDivisionRandom(
         }
         
         // Move to a new random block
-        T step = T((unsigned long)prng.Next()) * Modulus;
-        primetools::increment(base, step);
-        if (base >= diff) {
-            base = base % diff;
+        // We will now randomly select blocks within this range
+        if constexpr (std::is_same<T, mpz_class>::value) {
+            mpz_urandomm(block.get_mpz_t(), state, blocks.get_mpz_t());
+        } else {
+            primetools::increment(block, prng.Next());
+            if (block >= blocks) {
+                block %= blocks;
+            }
         }
     }
 
