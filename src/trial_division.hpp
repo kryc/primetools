@@ -219,13 +219,14 @@ TrialDivisionBitflip(
     return std::nullopt;
 };
 
-template <typename T, size_t BitSize = 5, size_t Modulus = 510510, size_t Count = 7680, const std::array<const uint64_t, Count>& GapArray = WHEEL510510GAPS>
-const std::optional<std::pair<T, T>>
+template <size_t BitSize = 5, size_t Modulus = 510510, size_t Count = 7680, const std::array<const uint64_t, Count>& GapArray = WHEEL510510GAPS>
+const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandom(
-    const T& N,
+    const mpz_class& N,
     const bool GuessSize = true,
     const size_t Bits = 0,
-    const Range<T>& Range = {T(0), T(0)}
+    const Range<mpz_class>& Range = {mpz_class(0), mpz_class(0)},
+    const uint64_t Seed = 0
 )
 {
     constexpr size_t GapsPerWord = 64 / BitSize;
@@ -237,10 +238,10 @@ TrialDivisionRandom(
 
     // Calculate the size of N's constituent primes
     const size_t bits = Bits != 0 ? Bits : (GuessSize ? primetools::GuessSizeOfPrimeFactors(N, true) : primetools::bit_size(N));
-    T lower_bound = GuessSize ? (T(1) << (bits - 1)) + Range.first : Range.first;
-    T upper_bound;
-    if (Range.second == T(0)) {
-        upper_bound = GuessSize ? T(1) << bits : N;
+    mpz_class lower_bound = GuessSize ? (mpz_class(1) << (bits - 1)) + Range.first : Range.first;
+    mpz_class upper_bound;
+    if (Range.second == mpz_class(0)) {
+        upper_bound = GuessSize ? mpz_class(1) << bits : N;
     } else {
         upper_bound = GuessSize ? lower_bound + Range.second : Range.second;
     }
@@ -256,26 +257,24 @@ TrialDivisionRandom(
     }
 
     // Calculate the difference between the bounds
-    T diff = upper_bound - lower_bound;
+    mpz_class diff = upper_bound - lower_bound;
 
     // Calculate the number of blocks
-    T blocks = diff / Modulus;
+    mpz_class blocks = diff / Modulus;
 
     std::cout << "Trying random factorization of primes of size " << bits << " bits. " << blocks << " blocks." << std::endl;
     std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
 
-    // Set up our PRNG
-    primetools::MiniPRNG64 prng;
-
     gmp_randstate_t state;
     gmp_randinit_default(state);
+    gmp_randseed_ui(state, Seed);
 
-    T block((unsigned long)prng.Next());
-    block %= blocks;
+    mpz_class block;
+    mpz_urandomm(block.get_mpz_t(), state, blocks.get_mpz_t());
 
     for (;;) {
         // Generate a random candidate prime at the start of the block
-        T candidate = lower_bound + (block * 510510) + 1;
+        mpz_class candidate = lower_bound + (block * Modulus) + 1;
 
         // Try wheel factorization within of the block
         for (uint64_t gaps : GapArray) {
@@ -294,15 +293,7 @@ TrialDivisionRandom(
         }
         
         // Move to a new random block
-        // We will now randomly select blocks within this range
-        if constexpr (std::is_same<T, mpz_class>::value) {
-            mpz_urandomm(block.get_mpz_t(), state, blocks.get_mpz_t());
-        } else {
-            primetools::increment(block, prng.Next());
-            if (block >= blocks) {
-                block %= blocks;
-            }
-        }
+        mpz_urandomm(block.get_mpz_t(), state, blocks.get_mpz_t());
     }
 
     return std::nullopt;
