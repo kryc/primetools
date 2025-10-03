@@ -5,6 +5,20 @@
 
 namespace primetools {
 
+const std::string
+TruncateNumber(
+    const mpz_class& Number,
+    const size_t StartDigits,
+    const size_t EndDigits
+)
+{
+    std::string str = Number.get_str();
+    if (str.length() <= StartDigits + EndDigits) {
+        return str;
+    }
+    return str.substr(0, StartDigits) + "..." + str.substr(str.length() - EndDigits);
+}
+
 const mpz_class
 divmod(
     const mpz_class& Value,

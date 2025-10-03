@@ -9,20 +9,6 @@
 #include "factorise.hpp"
 #include "util.hpp"
 
-const std::string
-TruncateNumber(
-    const mpz_class& Number,
-    const size_t StartDigits = 5,
-    const size_t EndDigits = 3
-)
-{
-    std::string str = Number.get_str();
-    if (str.length() <= StartDigits + EndDigits) {
-        return str;
-    }
-    return str.substr(0, StartDigits) + "..." + str.substr(str.length() - EndDigits);
-}
-
 template <typename T>
 void
 OutputFactors(
@@ -109,22 +95,22 @@ int main(
         const bool mffv4 = flags.find("mffv4") != flags.end();
 
         if (fermat) {
-            std::cout << "Using standard Fermat factorization of " << TruncateNumber(n) << std::endl;
+            std::cout << "Using standard Fermat factorization of " << primetools::TruncateNumber(n) << std::endl;
             auto result = primetools::FermatFactorisation(n, 0, max);
             OutputFactors(result);
         }
         else if (mffv2) {
-            std::cout << "Using Fermat Factorization Algorithm 2 of " << TruncateNumber(n) << std::endl;
+            std::cout << "Using Fermat Factorization Algorithm 2 of " << primetools::TruncateNumber(n) << std::endl;
             auto result = primetools::FermatFactorisationAlgorithm2(n, max);
             OutputFactors(result);
         }
         else if (mffv4) {
-            std::cout << "Using Modified Fermat Factorization V4 of " << TruncateNumber(n) << std::endl;
+            std::cout << "Using Modified Fermat Factorization V4 of " << primetools::TruncateNumber(n) << std::endl;
             auto result = primetools::ModifiedFermatFactorisation4(n, max);
             OutputFactors(result);
         }
         else {
-            std::cout << "Using FMMod20Precomp of " << TruncateNumber(n) << std::endl;
+            std::cout << "Using FMMod20Precomp of " << primetools::TruncateNumber(n) << std::endl;
             auto result = primetools::FMMod20Precomp(n, max);
             OutputFactors(result);
         }
@@ -145,12 +131,12 @@ int main(
         const bool pollard = flags.find("pollard") != flags.end();
 
         if (pollard) {
-            std::cout << "Pollard's rho factorization of " << TruncateNumber(n) << std::endl;
+            std::cout << "Pollard's rho factorization of " << primetools::TruncateNumber(n) << std::endl;
             auto result = primetools::PollardsRho(n);
             OutputFactors(result);
         }
         else {
-            std::cout << "Brent-Pollard's rho factorization of " << TruncateNumber(n) << std::endl;
+            std::cout << "Brent-Pollard's rho factorization of " << primetools::TruncateNumber(n) << std::endl;
             auto result = primetools::BrentPollardsRho(n);
             OutputFactors(result);
         }
@@ -200,6 +186,12 @@ int main(
             return 1;
         }
 
+        // Check if the user specified a modulus
+        size_t modulus = 510510; // Default to 510510
+        if (flags.find("modulus") != flags.end() || flags.find("wheel") != flags.end()) {
+            modulus = flags.find("modulus") != flags.end() ? std::stoul(flags["modulus"]) : std::stoul(flags["wheel"]);
+        }
+
         const mpz_class n(positionals[1]);
         const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"]) : mpz_class(1);
         const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"]) : mpz_class(0);
@@ -207,10 +199,10 @@ int main(
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
         const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
 
-        std::cout << "Random prime factorization of " << TruncateNumber(n) << std::endl;
+        std::cout << "Random prime factorization of " << primetools::TruncateNumber(n) << std::endl;
 
         if (threads == 0 || threads > 1) {
-            auto result = primetools::TrialDivisionRandomMT(n, threads, !noguess, bits, {start, end});
+            auto result = primetools::TrialDivisionRandomMT(n, threads, !noguess, bits, {start, end}, modulus);
             OutputFactors(result);
         }
         else {
@@ -238,7 +230,7 @@ int main(
         }
 
         const mpz_class n(positionals[1]);
-        const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"]) : mpz_class(1);
+        const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"]) : mpz_class(0);
         const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"]) : mpz_class(0);
         const bool noguess = flags.find("no-guess") != flags.end();
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
@@ -251,7 +243,7 @@ int main(
             OutputFactors(result);
         }
         else if (threads == 0 || threads > 1) {
-            auto result = primetools::TrialDivisionMT(n, threads, !noguess, bits, {0,0}, modulus);
+            auto result = primetools::TrialDivisionMT(n, threads, !noguess, bits, {start, end}, modulus);
             OutputFactors(result);
         }
         else {
@@ -299,7 +291,7 @@ int main(
         const mpz_class n(positionals[1]);
 
         bool is_prime = primetools::isprime(n);
-        std::cout << TruncateNumber(n) << (is_prime ? " is prime." : " is not prime.") << std::endl;
+        std::cout << primetools::TruncateNumber(n) << (is_prime ? " is prime." : " is not prime.") << std::endl;
     }
     else if (action == "calculatefermatiterations")
     {
@@ -315,7 +307,7 @@ int main(
 
         const mpz_class n(positionals[1]);
         size_t iterations = primetools::CalculateFermatIterations(n);
-        std::cout << "Fermat iterations for " << TruncateNumber(n) << ": " << iterations << std::endl;
+        std::cout << "Fermat iterations for " << primetools::TruncateNumber(n) << ": " << iterations << std::endl;
     }
     else
     {

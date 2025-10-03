@@ -16,6 +16,13 @@
 
 namespace primetools {
 
+const std::string
+TruncateNumber(
+    const mpz_class& Number,
+    const size_t StartDigits = 5,
+    const size_t EndDigits = 3
+);
+
 const mpz_class
 divmod(
     const mpz_class& Value,
@@ -98,14 +105,14 @@ divides(
     return (N % Value) == 0;
 }
 
-// static inline void
-// increment(
-//     mpz_class& Value,
-//     const mpz_class& Amount = 1
-// )
-// {
-//     mpz_add(Value.get_mpz_t(), Value.get_mpz_t(), Amount.get_mpz_t());
-// }
+static inline void
+increment(
+    mpz_class& Value,
+    const mpz_class& Amount = 1
+)
+{
+    mpz_add(Value.get_mpz_t(), Value.get_mpz_t(), Amount.get_mpz_t());
+}
 
 static inline void
 increment(
