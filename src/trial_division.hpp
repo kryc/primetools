@@ -348,6 +348,7 @@ const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionMT(
     const mpz_class& N,
     const size_t Threads = 0,
+    const size_t BlockSize = 0,
     const bool GuessSize = true,
     const size_t Bits = 0,
     const mpz_class& RangeLower = 0,
@@ -359,6 +360,7 @@ const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandomMT(
     const mpz_class& N,
     const size_t Threads = 0,
+    const size_t BlockSize = 0,
     const bool GuessSize = true,
     const size_t Bits = 0,
     const mpz_class& RangeLower = 0,

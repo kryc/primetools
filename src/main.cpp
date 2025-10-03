@@ -198,11 +198,12 @@ int main(
         const bool noguess = flags.find("no-guess") != flags.end();
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
         const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
+        const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(flags["blocksize"]) : 0;
 
         std::cout << "Random prime factorization of " << primetools::TruncateNumber(n) << std::endl;
 
         if (threads == 0 || threads > 1) {
-            auto result = primetools::TrialDivisionRandomMT(n, threads, !noguess, bits, start, end, modulus);
+            auto result = primetools::TrialDivisionRandomMT(n, threads, blocksize, !noguess, bits, start, end, modulus);
             OutputFactors(result);
         }
         else {
@@ -236,6 +237,7 @@ int main(
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
         const bool simd = flags.find("simd") != flags.end() || flags.find("use-simd") != flags.end();
         const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
+        const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(flags["blocksize"]) : 0;
 
         if (simd) {
             const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
@@ -243,7 +245,7 @@ int main(
             OutputFactors(result);
         }
         else if (threads == 0 || threads > 1) {
-            auto result = primetools::TrialDivisionMT(n, threads, !noguess, bits, start, end, modulus);
+            auto result = primetools::TrialDivisionMT(n, threads, blocksize, !noguess, bits, start, end, modulus);
             OutputFactors(result);
         }
         else {

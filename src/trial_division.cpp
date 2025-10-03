@@ -20,31 +20,32 @@ std::mutex status_mutex;
 std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionMTWorker(
     const mpz_class& N,
-    const mpz_class& lower_bound,
-    const mpz_class& upper_bound,
-    const mpz_class& BlockSize,
-    const mpz_class& blocks,
-    const size_t thread_id,
-    const size_t num_threads,
-    std::atomic<bool>& found
+    const mpz_class& LowerBound,
+    const mpz_class& UpperBound,
+    const mpz_class& ChunkSize,
+    const mpz_class& Chunks,
+    const size_t ThreadId,
+    const size_t NumThreads,
+    const size_t Modulus,
+    std::atomic<bool>& Found
 ) {
-    mpz_class thread_start = lower_bound + (thread_id * BlockSize);
-    mpz_class thread_end = thread_start + BlockSize;
-    while (!found.load(std::memory_order_relaxed) && thread_start <= upper_bound) {
-        mpz_class block_index = (thread_start - lower_bound) / BlockSize;
+    mpz_class thread_start = LowerBound + (ThreadId * ChunkSize);
+    mpz_class thread_end = thread_start + ChunkSize;
+    while (!Found.load(std::memory_order_relaxed) && thread_start <= UpperBound) {
+        mpz_class chunk_index = (thread_start - LowerBound) / ChunkSize;
         {
             std::lock_guard<std::mutex> lock(status_mutex);
-            std::cout << '\r' << "Block " << block_index << " of " << blocks << " (" <<
-                (block_index * 100) / blocks << "%) " << std::flush;
+            std::cout << '\r' << "Chunk " << chunk_index << " of " << Chunks << " (" <<
+                (chunk_index * 100) / Chunks << "%) " << std::flush;
         }
-        auto res = TrialDivisionRange<mpz_class, 510510, 5, 7680, WHEEL510510GAPS>(N, thread_start, thread_end);
-        if (res) {
-            found.store(true, std::memory_order_relaxed);
-            return res;
+        auto result = TrialDivisionRange<mpz_class>(N, thread_start, thread_end, Modulus);
+        if (result) {
+            Found.store(true, std::memory_order_relaxed);
+            return result;
         }
         std::this_thread::yield();
-        primetools::increment(thread_start, num_threads * BlockSize);
-        primetools::increment(thread_end, num_threads * BlockSize);
+        primetools::increment(thread_start, NumThreads * ChunkSize);
+        primetools::increment(thread_end, NumThreads * ChunkSize);
     }
     return std::nullopt;
 }
@@ -53,6 +54,7 @@ const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionMT(
     const mpz_class& N,
     const size_t Threads,
+    const size_t BlockSize,
     const bool GuessSize,
     const size_t Bits,
     const mpz_class& RangeLower,
@@ -62,6 +64,7 @@ TrialDivisionMT(
 {
     // Use hardware concurrency if Threads == 0
     const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
+    const size_t block_size = BlockSize ? BlockSize : 512;
 
     // Get upper and lower bounds
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
@@ -69,22 +72,23 @@ TrialDivisionMT(
     std::atomic<bool> found{false};
     std::vector<std::future<std::optional<std::pair<mpz_class, mpz_class>>>> futures;
 
-    const mpz_class BlockSize = Modulus * 256;
+    const mpz_class ChunkSize = Modulus * block_size;
     const mpz_class diff = upper_bound - lower_bound;
-    const mpz_class blocks = (diff / BlockSize);
+    const mpz_class chunks = (diff / ChunkSize);
 
-    std::cout << "Trying factorization of primes in range [" << lower_bound << ", " << upper_bound <<
-            "] using modulus " << Modulus << ". " << blocks << " blocks" << std::endl;
+    std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber(lower_bound) << ", " << primetools::TruncateNumber(upper_bound) <<
+            "] using modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
 
     for (size_t i = 0; i < num_threads; i++) {
         futures.emplace_back(std::async(std::launch::async, TrialDivisionMTWorker,
             std::cref(N),
             std::cref(lower_bound),
             std::cref(upper_bound),
-            std::cref(BlockSize),
-            std::cref(blocks),
+            std::cref(ChunkSize),
+            std::cref(chunks),
             i,
             num_threads,
+            Modulus,
             std::ref(found)
         ));
     }
@@ -107,32 +111,31 @@ TrialDivisionMT(
 std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandomMTWorker(
     const mpz_class& N,
-    const mpz_class& lower_bound,
-    const mpz_class& upper_bound,
-    const mpz_class& blocks,
+    const mpz_class& LowerBound,
+    const mpz_class& Chunks,
     const size_t Modulus,
-    const size_t BlockSize,
-    const size_t thread_id,
-    std::atomic<bool>& found
+    const size_t ChunkSize,
+    const size_t ThreadID,
+    std::atomic<bool>& Found
 ) {
     // Initialize the PRNG
     gmp_randstate_t state;
     gmp_randinit_default(state);
-    gmp_randseed_ui(state, thread_id + 1);
+    gmp_randseed_ui(state, ThreadID + 1);
 
     mpz_class start_block;
-    while (!found.load(std::memory_order_relaxed)) {
-        mpz_urandomm(start_block.get_mpz_t(), state, blocks.get_mpz_t());
-        mpz_class thread_start = lower_bound + (start_block * BlockSize);
-        mpz_class thread_end = thread_start + BlockSize;
+    while (!Found.load(std::memory_order_relaxed)) {
+        mpz_urandomm(start_block.get_mpz_t(), state, Chunks.get_mpz_t());
+        mpz_class thread_start = LowerBound + (start_block * ChunkSize);
+        mpz_class thread_end = thread_start + ChunkSize;
         // {
         //     std::lock_guard<std::mutex> lock(status_mutex);
         //     std::cout << '\r' << "Trying block index " << start_block << std::flush;
         // }
-        auto res = TrialDivisionRange<mpz_class>(N, thread_start, thread_end, Modulus);
-        if (res) {
-            found.store(true, std::memory_order_relaxed);
-            return res;
+        auto result = TrialDivisionRange<mpz_class>(N, thread_start, thread_end, Modulus);
+        if (result) {
+            Found.store(true, std::memory_order_relaxed);
+            return result;
         }
         std::this_thread::yield();
     }
@@ -143,6 +146,7 @@ const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandomMT(
     const mpz_class& N,
     const size_t Threads,
+    const size_t BlockSize,
     const bool GuessSize,
     const size_t Bits,
     const mpz_class& RangeLower,
@@ -151,8 +155,8 @@ TrialDivisionRandomMT(
 )
 {
     // Use hardware concurrency if Threads == 0
-    const size_t BlockSize = Modulus * 2048;
     const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
+    const size_t block_size = BlockSize ? BlockSize : 512;
 
     std::atomic<bool> found{false};
     std::vector<std::future<std::optional<std::pair<mpz_class, mpz_class>>>> futures;
@@ -161,20 +165,20 @@ TrialDivisionRandomMT(
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
     // Calculate the number of Modulus-sized blocks
+    const size_t chunk_size = Modulus * block_size;
     mpz_class diff = upper_bound - lower_bound;
-    mpz_class blocks = diff / BlockSize;
+    mpz_class chunks = diff / chunk_size;
 
-    std::cout << "Trying factorization of primes in range [" << lower_bound << ", " << upper_bound <<
-            "] using random block search with modulus " << Modulus << ". " << blocks << " blocks" << std::endl;
+    std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber(lower_bound) << ", " << primetools::TruncateNumber(upper_bound) <<
+            "] using random block search with modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
 
     for (size_t i = 0; i < num_threads; i++) {
         futures.emplace_back(std::async(std::launch::async, TrialDivisionRandomMTWorker,
             std::cref(N),
             std::cref(lower_bound),
-            std::cref(upper_bound),
-            std::cref(blocks),
+            std::cref(chunks),
             Modulus,
-            BlockSize,
+            chunk_size,
             i,
             std::ref(found)
         ));
@@ -188,8 +192,7 @@ TrialDivisionRandomMT(
             break;
         }
     }
-    // Terminate the status line
-    std::cout << std::endl;
+    
     return result;
 }
 
