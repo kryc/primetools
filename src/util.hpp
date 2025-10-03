@@ -116,15 +116,6 @@ increment(
     mpz_add_ui(Value.get_mpz_t(), Value.get_mpz_t(), Amount);
 }
 
-static inline void
-increment(
-    mpz_class& Value,
-    const uint32_t Amount = 1
-)
-{
-    mpz_add_ui(Value.get_mpz_t(), Value.get_mpz_t(), Amount);
-}
-
 // Cover all basic types
 template <typename T>
 static inline void
@@ -183,15 +174,14 @@ modulo(
     return mpz_fdiv_ui(A.get_mpz_t(), M);
 }
 
-// template <typename T1, typename T2>
-// static inline T2
-// modulo(
-//     T1& A,
-//     const T2 M
-// )
-// {
-//     A %= M;
-// }
+static inline uint64_t
+modulo(
+    uint64_t& A,
+    const uint64_t M
+)
+{
+    return A % M;
+}
 
 
 static inline void

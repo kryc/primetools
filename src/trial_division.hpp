@@ -36,7 +36,7 @@ TrialDivisionWheelInternal(
 
     const size_t bits = Bits != 0 ? Bits : (GuessSize ? primetools::GuessSizeOfPrimeFactors(N, true) : primetools::bit_size(N));
     T lower_bound = GuessSize ? (T(1) << (bits - 1)) + Range.first : Range.first;
-    mpz_class upper_bound = (Range.second == 0) 
+    T upper_bound = (Range.second == 0) 
         ? (GuessSize ? T(1) << bits : T(sqrt(N))) 
         : (GuessSize ? lower_bound + Range.second : Range.second);
 
