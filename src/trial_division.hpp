@@ -16,9 +16,6 @@
 namespace primetools {
 
 template <typename T>
-using Range = std::pair<const T, const T>;
-
-template <typename T>
 static inline
 const std::tuple<const T, const T, const size_t>
 GetUpperAndLowerBounds(
@@ -26,14 +23,15 @@ GetUpperAndLowerBounds(
     const size_t Modulus,
     const bool GuessSize,
     const size_t Bits,
-    const Range<T>& Range
+    const T& RangeLower = 0,
+    const T& RangeUpper = 0
 )
 {
     const size_t bits = Bits != 0 ? Bits : (GuessSize ? primetools::GuessSizeOfPrimeFactors(N, true) : primetools::bit_size(N));
-    T lower_bound = GuessSize ? (T(1) << (bits - 1)) + Range.first : Range.first;
-    T upper_bound = (Range.second == 0) 
+    T lower_bound = GuessSize ? (T(1) << (bits - 1)) + RangeLower : RangeLower;
+    T upper_bound = (RangeUpper == 0) 
         ? (GuessSize ? T(1) << bits : T(sqrt(N))) 
-        : (GuessSize ? lower_bound + Range.second : Range.second);
+        : (GuessSize ? lower_bound + RangeUpper : RangeUpper);
 
     // Step back lower_bound to be a multiple of Modulus
     if (lower_bound % Modulus != 0) {
@@ -149,7 +147,8 @@ TrialDivisionWheelInternal(
     const T& N,
     const bool GuessSize = true,
     const size_t Bits = 0,
-    const Range<T>& Range = {T(0), T(0)}
+    const T& RangeLower = 0,
+    const T& RangeUpper = 0
 )
 {
     if (N < 2) {
@@ -157,7 +156,7 @@ TrialDivisionWheelInternal(
     }
 
     // Calculate the bounds and bits
-    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, Range);
+    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
     if (GuessSize) {
         std::cout << "Trying factorization of " << bits << "-bit primes below " << upper_bound <<
@@ -172,43 +171,37 @@ TrialDivisionWheelInternal(
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel9699690(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 9699690, 6, 165888, WHEEL9699690GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 9699690, 6, 165888, WHEEL9699690GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel510510(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 510510, 5, 7680, WHEEL510510GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 510510, 5, 7680, WHEEL510510GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel30030(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 30030, 5, 480, WHEEL30030GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 30030, 5, 480, WHEEL30030GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel2310(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 2310, 4, 30, WHEEL2310GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 2310, 4, 30, WHEEL2310GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel210(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 210, 4, 3, WHEEL210GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 210, 4, 3, WHEEL210GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel30(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    Range<T> RangeValue = Range<T>{StartValue, EndValue};
-    return TrialDivisionWheelInternal<T, 30, 4, 1, WHEEL30GAPS>(N, GuessSize, Bits, RangeValue);
+    return TrialDivisionWheelInternal<T, 30, 4, 1, WHEEL30GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
@@ -292,7 +285,8 @@ TrialDivisionRandom(
     const mpz_class& N,
     const bool GuessSize = true,
     const size_t Bits = 0,
-    const Range<mpz_class>& Range = {mpz_class(0), mpz_class(0)},
+    const mpz_class& RangeLower = 0,
+    const mpz_class& RangeUpper = 0,
     const uint64_t Seed = 0,
     const size_t MaxIterations = std::numeric_limits<size_t>::max()
 )
@@ -304,7 +298,7 @@ TrialDivisionRandom(
     }
 
     // Calculate the bounds and bits
-    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, Range);
+    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
     // Calculate the difference between the bounds
     mpz_class diff = upper_bound - lower_bound;
@@ -356,7 +350,8 @@ TrialDivisionMT(
     const size_t Threads = 0,
     const bool GuessSize = true,
     const size_t Bits = 0,
-    const Range<mpz_class>& Range = {mpz_class(0), mpz_class(0)},
+    const mpz_class& RangeLower = 0,
+    const mpz_class& RangeUpper = 0,
     const size_t Modulus = 510510
 );
 
@@ -366,7 +361,8 @@ TrialDivisionRandomMT(
     const size_t Threads = 0,
     const bool GuessSize = true,
     const size_t Bits = 0,
-    const Range<mpz_class>& Range = {mpz_class(0), mpz_class(0)},
+    const mpz_class& RangeLower = 0,
+    const mpz_class& RangeUpper = 0,
     const size_t Modulus = 510510
 );
 

@@ -55,7 +55,8 @@ TrialDivisionMT(
     const size_t Threads,
     const bool GuessSize,
     const size_t Bits,
-    const Range<mpz_class>& Range,
+    const mpz_class& RangeLower,
+    const mpz_class& RangeUpper,
     const size_t Modulus
 )
 {
@@ -63,7 +64,7 @@ TrialDivisionMT(
     const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
 
     // Get upper and lower bounds
-    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, Range);
+    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
     std::atomic<bool> found{false};
     std::vector<std::future<std::optional<std::pair<mpz_class, mpz_class>>>> futures;
@@ -144,7 +145,8 @@ TrialDivisionRandomMT(
     const size_t Threads,
     const bool GuessSize,
     const size_t Bits,
-    const Range<mpz_class>& Range,
+    const mpz_class& RangeLower,
+    const mpz_class& RangeUpper,
     const size_t Modulus
 )
 {
@@ -156,7 +158,7 @@ TrialDivisionRandomMT(
     std::vector<std::future<std::optional<std::pair<mpz_class, mpz_class>>>> futures;
 
     // Get bounds and bits
-    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, Range);
+    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
     // Calculate the number of Modulus-sized blocks
     mpz_class diff = upper_bound - lower_bound;

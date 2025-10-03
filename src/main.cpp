@@ -202,11 +202,11 @@ int main(
         std::cout << "Random prime factorization of " << primetools::TruncateNumber(n) << std::endl;
 
         if (threads == 0 || threads > 1) {
-            auto result = primetools::TrialDivisionRandomMT(n, threads, !noguess, bits, {start, end}, modulus);
+            auto result = primetools::TrialDivisionRandomMT(n, threads, !noguess, bits, start, end, modulus);
             OutputFactors(result);
         }
         else {
-            auto result = primetools::TrialDivisionRandom(n, !noguess, bits, {start, end});
+            auto result = primetools::TrialDivisionRandom(n, !noguess, bits, start, end);
             OutputFactors(result);
         }
     }
@@ -243,7 +243,7 @@ int main(
             OutputFactors(result);
         }
         else if (threads == 0 || threads > 1) {
-            auto result = primetools::TrialDivisionMT(n, threads, !noguess, bits, {start, end}, modulus);
+            auto result = primetools::TrialDivisionMT(n, threads, !noguess, bits, start, end, modulus);
             OutputFactors(result);
         }
         else {
