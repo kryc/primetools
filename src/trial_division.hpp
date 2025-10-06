@@ -46,7 +46,7 @@ GetUpperAndLowerBounds(
     return std::make_tuple(lower_bound, upper_bound, bits);
 }
 
-template <typename T, const size_t Modulus, const size_t BitSize, const size_t Count, const std::array<const uint64_t, Count>& GapArray>
+template <typename T, const size_t Modulus, const size_t BitSize, const size_t Count, const bool Packed, const std::array<const uint64_t, Count>& GapArray>
 static const std::optional<std::pair<T, T>>
 TrialDivisionRange(
     const T& N,
@@ -54,8 +54,8 @@ TrialDivisionRange(
     const T& EndValue
 )
 {
-    constexpr size_t GapsPerWord = 64 / BitSize;
-    constexpr uint64_t GapsMask = (1 << BitSize) - 1;
+    constexpr size_t GapsPerWord =  Packed ? 63 / BitSize : 64 / BitSize;
+    constexpr uint64_t GapsMask = Packed ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
 
     T candidate = StartValue;
 
@@ -124,24 +124,24 @@ TrialDivisionRange(
 {
     switch(Modulus) {
         case 9699690:
-            return TrialDivisionRange<T, 9699690, 6, 165888, WHEEL9699690GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 9699690, 5, 138240, true, WHEEL9699690GAPS>(N, StartValue, EndValue);
         case 510510:
-            return TrialDivisionRange<T, 510510, 5, 7680, WHEEL510510GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 510510, 4, 6144, true, WHEEL510510GAPS>(N, StartValue, EndValue);
         case 30030:
-            return TrialDivisionRange<T, 30030, 5, 480, WHEEL30030GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 30030, 4, 384, true, WHEEL30030GAPS>(N, StartValue, EndValue);
         case 2310:
-            return TrialDivisionRange<T, 2310, 4, 30, WHEEL2310GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 2310, 4, 30, false, WHEEL2310GAPS>(N, StartValue, EndValue);
         case 210:
-            return TrialDivisionRange<T, 210, 4, 3, WHEEL210GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 210, 4, 3, false, WHEEL210GAPS>(N, StartValue, EndValue);
         case 30:
-            return TrialDivisionRange<T, 30, 4, 1, WHEEL30GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 30, 4, 1, false, WHEEL30GAPS>(N, StartValue, EndValue);
         default:
             std::cerr << "Error: Unsupported modulus for trial division: " << Modulus << std::endl;
             return std::nullopt;
     }
 }
 
-template <typename T, const size_t Modulus, const size_t BitSize, const size_t Count, const std::array<const uint64_t, Count>& GapArray>
+template <typename T, const size_t Modulus, const size_t BitSize, const size_t Count, const bool Packed, const std::array<const uint64_t, Count>& GapArray>
 static const std::optional<std::pair<T, T>>
 TrialDivisionWheelInternal(
     const T& N,
@@ -159,49 +159,48 @@ TrialDivisionWheelInternal(
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
     if (GuessSize) {
-        std::cout << "Trying factorization of " << bits << "-bit primes below " << upper_bound <<
-            " using wheel" << Modulus << " factorization." << std::endl;
+        std::cout << "Trying factorization of " << bits << "-bit primes using wheel" << Modulus << " factorization." << std::endl;
     }
-    std::cout << "Trying factorization of primes in range [" << lower_bound << ", " << upper_bound <<
+    std::cout << "Searching primes in range [" << lower_bound << ", " << upper_bound <<
         "] using wheel" << Modulus << " factorization." << std::endl;
 
-    return TrialDivisionRange<T, Modulus, BitSize, Count, GapArray>(N, lower_bound, upper_bound);
+    return TrialDivisionRange<T, Modulus, BitSize, Count, Packed, GapArray>(N, lower_bound, upper_bound);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel9699690(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    return TrialDivisionWheelInternal<T, 9699690, 6, 165888, WHEEL9699690GAPS>(N, GuessSize, Bits, StartValue, EndValue);
+    return TrialDivisionWheelInternal<T, 9699690, 5, 138240, true, WHEEL9699690GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel510510(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    return TrialDivisionWheelInternal<T, 510510, 5, 7680, WHEEL510510GAPS>(N, GuessSize, Bits, StartValue, EndValue);
+    return TrialDivisionWheelInternal<T, 510510, 4, 6144, true, WHEEL510510GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel30030(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    return TrialDivisionWheelInternal<T, 30030, 5, 480, WHEEL30030GAPS>(N, GuessSize, Bits, StartValue, EndValue);
+    return TrialDivisionWheelInternal<T, 30030, 4, 384, true, WHEEL30030GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel2310(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    return TrialDivisionWheelInternal<T, 2310, 4, 30, WHEEL2310GAPS>(N, GuessSize, Bits, StartValue, EndValue);
+    return TrialDivisionWheelInternal<T, 2310, 4, 30, false, WHEEL2310GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel210(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    return TrialDivisionWheelInternal<T, 210, 4, 3, WHEEL210GAPS>(N, GuessSize, Bits, StartValue, EndValue);
+    return TrialDivisionWheelInternal<T, 210, 4, 3, false, WHEEL210GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
 static inline const std::optional<std::pair<T, T>>
 TrialDivisionWheel30(const T& N, const bool GuessSize = true, const size_t Bits = 0, const T StartValue = 0, const T EndValue = 0) {
-    return TrialDivisionWheelInternal<T, 30, 4, 1, WHEEL30GAPS>(N, GuessSize, Bits, StartValue, EndValue);
+    return TrialDivisionWheelInternal<T, 30, 4, 1, false, WHEEL30GAPS>(N, GuessSize, Bits, StartValue, EndValue);
 }
 
 template <typename T>
@@ -279,7 +278,7 @@ TrialDivisionBitflip(
     return std::nullopt;
 };
 
-template <size_t BitSize = 5, size_t Modulus = 510510, size_t Count = 7680, const std::array<const uint64_t, Count>& GapArray = WHEEL510510GAPS>
+template <size_t BitSize = 4, size_t Modulus = 510510, size_t Count = 6144, const bool Packed = true, const std::array<const uint64_t, Count>& GapArray = WHEEL510510GAPS>
 const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandom(
     const mpz_class& N,
@@ -320,7 +319,7 @@ TrialDivisionRandom(
         mpz_class block_start = lower_bound + (block * BlockSize);
         mpz_class block_end = block_start + BlockSize;
 
-        auto result = TrialDivisionRange<mpz_class, Modulus, BitSize, Count, GapArray>(N, block_start, block_end);
+        auto result = TrialDivisionRange<mpz_class, Modulus, BitSize, Count, Packed, GapArray>(N, block_start, block_end);
         if (result) {
             return result;
         }
