@@ -46,7 +46,7 @@ GetUpperAndLowerBounds(
     return std::make_tuple(lower_bound, upper_bound, bits);
 }
 
-template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const bool Packed, const std::array<const AT, Count>& GapArray>
+template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const bool Packed, const std::span<const AT, Count>& GapArray>
 static const std::optional<std::pair<T, T>>
 TrialDivisionRange(
     const T& N,
@@ -123,6 +123,8 @@ TrialDivisionRange(
 )
 {
     switch(Modulus) {
+        // case 223092870:
+        //     return TrialDivisionRange<T, 223092870, 5, __uint128_t, 1459815, true, WHEEL223092870GAPS>(N, StartValue, EndValue);
         case 9699690:
             return TrialDivisionRange<T, 9699690, 5, __uint128_t, 66356, true, WHEEL9699690GAPS>(N, StartValue, EndValue);
         case 510510:

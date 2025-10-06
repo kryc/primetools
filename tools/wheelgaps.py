@@ -1,5 +1,7 @@
+import argparse
 from Cryptodome.Util import number
 from math import gcd
+import struct
 
 def calculate_wheel_gaps(max_prime):
     # Get all primes up to and uncluding max_prime
@@ -21,7 +23,7 @@ def calculate_wheel_gaps(max_prime):
     # return modulus and gaps
     return W, gaps
 
-def main(max_prime: int, pack: bool = True, use_128: bool = False):
+def main(out_file: str, max_prime: int, pack: bool = True, use_128: bool = False):
     W, gaps = calculate_wheel_gaps(max_prime)
 
     # Calculate the number of bits needed to store the largest gap
@@ -45,30 +47,41 @@ def main(max_prime: int, pack: bool = True, use_128: bool = False):
     assert max(gaps) <= bit_mask
 
     # 3. Emit C‐style packed array
-    print(f"// Wheel modulus = {W}, total gaps = {len(gaps)}, bits_required = {bits}, gaps_per_word = {gaps_per_word}, word_count = {word_count}")
-    print(f"static const std::array<const {storage_type}, {word_count}> WHEEL{W}GAPS = " + "{")
-    for i in range(0, len(gaps), gaps_per_word):
-        block = gaps[i:i+gaps_per_word]
-        word = 0
-        for j, g in enumerate(block):
-            shift = j * bits  # pack each gap
-            assert (g & bit_mask) == g
-            word |= g << shift
-        # Final shift left by 1
-        if pack:
-            word <<= 1
-        if use_128:
-            # Split into two 64-bit parts for const assignnemt
-            upper = (word >> 64) & 0xFFFFFFFFFFFFFFFF
-            lower = word & 0xFFFFFFFFFFFFFFFF
-            print(f"    ((__uint128_t)0x{upper:016x}ULL << 64) | 0x{lower:016x}ULL,")
-        else:
-            print(f"    0x{word:016x}ULL,")
-    print("};")
-    print()
+    with open(out_file, "wb") as f:
+        print(f"// Wheel modulus = {W}, total gaps = {len(gaps)}, bits_required = {bits}, gaps_per_word = {gaps_per_word}, word_count = {word_count}")
+        print(f"static const {storage_type} WHEEL{W}GAPS[] = " + "{")
+        print(f"#embed \"{out_file}\"")
+        for i in range(0, len(gaps), gaps_per_word):
+            block = gaps[i:i+gaps_per_word]
+            word = 0
+            for j, g in enumerate(block):
+                shift = j * bits  # pack each gap
+                assert (g & bit_mask) == g
+                word |= g << shift
+            # Final shift left by 1
+            if pack:
+                word <<= 1
+            if use_128:
+                # Split into two 64-bit parts for const assignnemt
+                upper = (word >> 64) & 0xFFFFFFFFFFFFFFFF
+                lower = word & 0xFFFFFFFFFFFFFFFF
+                # print(f"    ((__uint128_t)0x{upper:016x}ULL << 64) | 0x{lower:016x}ULL,")
+                f.write(struct.pack("<QQ", lower, upper))
+            else:
+                # print(f"    0x{word:016x}ULL,")
+                f.write(struct.pack("<Q", word))
+        print("};")
+        print()
     # print(f"#define WHEEL_GAPS_COUNT   {len(gaps)}")
     # print(f"#define WHEEL_WORD_COUNT   ({(len(gaps) + 11) // 12})")  # Ceiling division for 12 gaps per word
 
 if __name__ == "__main__":
-    # First primes: 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47
-    main(17, True, True)
+    # First primes: 2, 3, 5, 7(30), 11(210), 13(30030), 17(510510), 19(9699690), 23(223092870), 29, 31, 37, 41, 43, 47
+    parser = argparse.ArgumentParser(description="Calculate wheel gaps for prime sieving.")
+    parser.add_argument("output", type=str, help="Output file name.")
+    parser.add_argument("max_prime", type=int, help="Maximum prime to use for wheel calculation.")
+    parser.add_argument("--nopack", action="store_true", help="Do not pack gaps, use full size.")
+    parser.add_argument("--use128", action="store_true", help="Use 128-bit storage type.")
+    args = parser.parse_args()
+
+    main(args.output, args.max_prime, pack=not args.nopack, use_128=args.use128)
