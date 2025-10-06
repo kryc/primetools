@@ -199,6 +199,8 @@ int main(
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
         const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
         const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(flags["blocksize"]) : 0;
+        const uint64_t seed = flags.find("seed") != flags.end() ? std::stoull(flags["seed"]) : 0;
+        const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
 
         std::cout << "Random prime factorization of " << primetools::TruncateNumber(n) << std::endl;
 
@@ -207,7 +209,7 @@ int main(
             OutputFactors(result);
         }
         else {
-            auto result = primetools::TrialDivisionRandom(n, !noguess, bits, start, end);
+            auto result = primetools::TrialDivisionRandom(n, !noguess, bits, start, end, seed, modulus, max_iterations);
             OutputFactors(result);
         }
     }

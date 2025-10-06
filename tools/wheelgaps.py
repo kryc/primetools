@@ -21,14 +21,15 @@ def calculate_wheel_gaps(max_prime):
     # return modulus and gaps
     return W, gaps
 
-def main(max_prime: int, pack: bool = True):
+def main(max_prime: int, pack: bool = True, use_128: bool = False):
     W, gaps = calculate_wheel_gaps(max_prime)
 
     # Calculate the number of bits needed to store the largest gap
     largest_gap = max(gaps)
     bits = largest_gap.bit_length()
 
-    storage_bits = 64    
+    storage_type = "uint64_t" if not use_128 else "__uint128_t"
+    storage_bits = 64 if not use_128 else 128
 
     if pack:
         # Shift all gaps right by 1
@@ -45,18 +46,24 @@ def main(max_prime: int, pack: bool = True):
 
     # 3. Emit C‐style packed array
     print(f"// Wheel modulus = {W}, total gaps = {len(gaps)}, bits_required = {bits}, gaps_per_word = {gaps_per_word}, word_count = {word_count}")
-    print(f"static const std::array<const uint64_t, {word_count}> WHEEL{W}GAPS = " + "{")
+    print(f"static const std::array<const {storage_type}, {word_count}> WHEEL{W}GAPS = " + "{")
     for i in range(0, len(gaps), gaps_per_word):
         block = gaps[i:i+gaps_per_word]
         word = 0
         for j, g in enumerate(block):
             shift = j * bits  # pack each gap
             assert (g & bit_mask) == g
-            word |= (g & bit_mask) << shift
+            word |= g << shift
         # Final shift left by 1
         if pack:
             word <<= 1
-        print(f"    0x{word:016x}ULL,")
+        if use_128:
+            # Split into two 64-bit parts for const assignnemt
+            upper = (word >> 64) & 0xFFFFFFFFFFFFFFFF
+            lower = word & 0xFFFFFFFFFFFFFFFF
+            print(f"    ((__uint128_t)0x{upper:016x}ULL << 64) | 0x{lower:016x}ULL,")
+        else:
+            print(f"    0x{word:016x}ULL,")
     print("};")
     print()
     # print(f"#define WHEEL_GAPS_COUNT   {len(gaps)}")
@@ -64,4 +71,4 @@ def main(max_prime: int, pack: bool = True):
 
 if __name__ == "__main__":
     # First primes: 2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47
-    main(19, True)
+    main(17, True, True)
