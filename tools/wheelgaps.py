@@ -1,6 +1,7 @@
 import argparse
 from Cryptodome.Util import number
 from math import gcd
+import os
 import struct
 
 def calculate_wheel_gaps(max_prime):
@@ -72,8 +73,11 @@ def main(out_file: str, max_prime: int, pack: bool = True, use_128: bool = False
                 f.write(struct.pack("<Q", word))
         print("};")
         print()
-    # print(f"#define WHEEL_GAPS_COUNT   {len(gaps)}")
-    # print(f"#define WHEEL_WORD_COUNT   ({(len(gaps) + 11) // 12})")  # Ceiling division for 12 gaps per word
+
+    # Validate the file size
+    expected_size = word_count * (16 if use_128 else 8)
+    actual_size = os.path.getsize(out_file)
+    assert expected_size == actual_size, f"Expected file size {expected_size}, got {actual_size}"
 
 if __name__ == "__main__":
     # First primes: 2, 3, 5, 7(30), 11(210), 13(30030), 17(510510), 19(9699690), 23(223092870), 29, 31, 37, 41, 43, 47
