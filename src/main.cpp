@@ -313,6 +313,10 @@ int main(
         size_t iterations = primetools::CalculateFermatIterations(n);
         std::cout << "Fermat iterations for " << primetools::TruncateNumber(n) << ": " << iterations << std::endl;
     }
+    else if (action == "moduli")
+    {
+        std::cout << "Supported wheel moduli: 30, 210, 2310, 30030, 510510, 9699690, 223092870" << std::endl;
+    }
     else
     {
         std::cerr << "Unknown action: " << action << std::endl;
