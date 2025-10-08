@@ -30,7 +30,7 @@ GetUpperAndLowerBounds(
     const size_t bits = Bits != 0 ? Bits : (GuessSize ? primetools::GuessSizeOfPrimeFactors(N, true) : primetools::bit_size(N));
     T lower_bound = GuessSize ? (T(1) << (bits - 1)) + RangeLower : RangeLower;
     T upper_bound = (RangeUpper == 0) 
-        ? (GuessSize ? T(1) << bits : T(sqrt(N))) 
+        ? (GuessSize ? primetools::min(T(1) << bits, T(sqrt(N))) : T(sqrt(N))) 
         : (GuessSize ? lower_bound + RangeUpper : RangeUpper);
 
     // Step back lower_bound to be a multiple of Modulus

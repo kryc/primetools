@@ -234,6 +234,46 @@ is_numeric(
     const std::string_view Str
 );
 
+static inline
+const mpz_class
+min(
+    const mpz_class& A,
+    const mpz_class& B
+)
+{
+    return (A < B) ? A : B;
+}
+
+static inline
+const uint64_t
+min(
+    const uint64_t A,
+    const uint64_t B
+)
+{
+    return (A < B) ? A : B;
+}
+
+static inline
+const mpz_class
+max(
+    const mpz_class& A,
+    const mpz_class& B
+)
+{
+    return (A > B) ? A : B;
+}
+
+static inline
+const uint64_t
+max(
+    const uint64_t A,
+    const uint64_t B
+)
+{
+    return (A > B) ? A : B;
+}
+
 } // namespace primetools
 
 #endif

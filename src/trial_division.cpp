@@ -72,9 +72,9 @@ TrialDivisionMT(
     std::atomic<bool> found{false};
     std::vector<std::future<std::optional<std::pair<mpz_class, mpz_class>>>> futures;
 
-    const mpz_class ChunkSize = Modulus * block_size;
+    const mpz_class chunk_size = Modulus * block_size;
     const mpz_class diff = upper_bound - lower_bound;
-    const mpz_class chunks = (diff / ChunkSize);
+    const mpz_class chunks = (diff / chunk_size);
 
     std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber(lower_bound) << ", " << primetools::TruncateNumber(upper_bound) <<
             "] using modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
@@ -84,7 +84,7 @@ TrialDivisionMT(
             std::cref(N),
             std::cref(lower_bound),
             std::cref(upper_bound),
-            std::cref(ChunkSize),
+            std::cref(chunk_size),
             std::cref(chunks),
             i,
             num_threads,
