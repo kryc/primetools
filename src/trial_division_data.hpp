@@ -49,10 +49,13 @@ alignas (__uint128_t) static const int8_t WHEEL9699690GAPSDATA_RAW[] = {
 static_assert(sizeof(WHEEL9699690GAPSDATA_RAW) == 66356 * sizeof(__uint128_t));
 static const __uint128_t* WHEEL9699690GAPSDATA = reinterpret_cast<const __uint128_t*>(WHEEL9699690GAPSDATA_RAW);
 static const std::span<const __uint128_t, 66356> WHEEL9699690GAPS(reinterpret_cast<const __uint128_t*>(WHEEL9699690GAPSDATA), 66356);
+
 // Wheel modulus = 223092870, total gaps = 36495360, bits_required = 5, gaps_per_word = 25, word_count = 1459815
-// static const __int128_t WHEEL223092870GAPSDATA[] = {
-// #embed "../rsrc/wheel223092870.bin"
-// };
-// static const std::span<const __uint128_t, 1459815> WHEEL223092870GAPS(reinterpret_cast<const __uint128_t*>(WHEEL223092870GAPSDATA), 1459815);
+alignas (__uint128_t) static const int8_t WHEEL223092870GAPSDATA_RAW[] = {
+#embed "../rsrc/wheel223092870.bin"
+};
+static_assert(sizeof(WHEEL223092870GAPSDATA_RAW) == 1459815 * sizeof(__uint128_t));
+static const __uint128_t* WHEEL223092870GAPSDATA = reinterpret_cast<const __uint128_t*>(WHEEL223092870GAPSDATA_RAW);
+static const std::span<const __uint128_t, 1459815> WHEEL223092870GAPS(reinterpret_cast<const __uint128_t*>(WHEEL223092870GAPSDATA), 1459815);
 
 } // namespace primetools

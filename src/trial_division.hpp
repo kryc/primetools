@@ -123,8 +123,8 @@ TrialDivisionRange(
 )
 {
     switch(Modulus) {
-        // case 223092870:
-        //     return TrialDivisionRange<T, 223092870, 5, __uint128_t, 1459815, true, WHEEL223092870GAPS>(N, StartValue, EndValue);
+        case 223092870:
+            return TrialDivisionRange<T, 223092870, 5, __uint128_t, 1459815, true, WHEEL223092870GAPS>(N, StartValue, EndValue);
         case 9699690:
             return TrialDivisionRange<T, 9699690, 5, __uint128_t, 66356, true, WHEEL9699690GAPS>(N, StartValue, EndValue);
         case 510510:
