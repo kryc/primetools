@@ -11,6 +11,8 @@ def calculate_wheel_gaps(max_prime):
     for p in primes:
         W *= p
 
+    print("Wheel modulus W =", W)
+
     residues = [r for r in range(1, W) if gcd(r, W) == 1]
     gaps = [(residues[(i+1) % len(residues)] - residues[i]) % W
             for i in range(len(residues))]
@@ -24,7 +26,7 @@ def calculate_wheel_gaps(max_prime):
     # return modulus and gaps
     return W, gaps
 
-def main(out_file: str, max_prime: int, pack: bool = True, use_128: bool = False):
+def main(out_file: str, max_prime: int, pack: int = 0, use_128: bool = False):
     W, gaps = calculate_wheel_gaps(max_prime)
 
     # Calculate the number of bits needed to store the largest gap
@@ -34,10 +36,11 @@ def main(out_file: str, max_prime: int, pack: bool = True, use_128: bool = False
     storage_type = "uint64_t" if not use_128 else "__uint128_t"
     storage_bits = 64 if not use_128 else 128
 
-    if pack:
+    if pack in (1, 2):
         # Shift all gaps right by 1
         gaps = [g >> 1 for g in gaps]
         bits -= 1  # one less bit needed
+    if pack == 1:
         storage_bits -= 1  # one less bit available
 
     bit_mask = (1 << bits) - 1
@@ -50,6 +53,7 @@ def main(out_file: str, max_prime: int, pack: bool = True, use_128: bool = False
     # 3. Emit C‐style packed array
     with open(out_file, "wb") as f:
         print(f"// Wheel modulus = {W}, total gaps = {len(gaps)}, bits_required = {bits}, gaps_per_word = {gaps_per_word}, word_count = {word_count}")
+        print(f"static constexpr size_t WHEEL{W}GAP_COUNT = {word_count};")
         print(f"static const {storage_type} WHEEL{W}GAPS[] = " + "{")
         print(f"#embed \"{out_file}\"")
         for i in range(0, len(gaps), gaps_per_word):
@@ -60,7 +64,7 @@ def main(out_file: str, max_prime: int, pack: bool = True, use_128: bool = False
                 assert (g & bit_mask) == g
                 word |= g << shift
             # Final shift left by 1
-            if pack:
+            if pack == 1:
                 word <<= 1
             if use_128:
                 # Split into two 64-bit parts for const assignnemt
@@ -80,12 +84,12 @@ def main(out_file: str, max_prime: int, pack: bool = True, use_128: bool = False
     assert expected_size == actual_size, f"Expected file size {expected_size}, got {actual_size}"
 
 if __name__ == "__main__":
-    # First primes: 2, 3, 5, 7(30), 11(210), 13(30030), 17(510510), 19(9699690), 23(223092870), 29, 31, 37, 41, 43, 47
+    # First primes: 2, 3, 5(30), 7(210), 11(2310), 13(30030), 17(510510), 19(9699690), 23(223092870), 29, 31, 37, 41, 43, 47
     parser = argparse.ArgumentParser(description="Calculate wheel gaps for prime sieving.")
     parser.add_argument("output", type=str, help="Output file name.")
     parser.add_argument("max_prime", type=int, help="Maximum prime to use for wheel calculation.")
-    parser.add_argument("--nopack", action="store_true", help="Do not pack gaps, use full size.")
+    parser.add_argument("--pack", type=int, default=0, help="Type of packing to use. 0 = no packing, 1 = N-1 packing, 2 = Full packing.")
     parser.add_argument("--use128", action="store_true", help="Use 128-bit storage type.")
     args = parser.parse_args()
 
-    main(args.output, args.max_prime, pack=not args.nopack, use_128=args.use128)
+    main(args.output, args.max_prime, pack=args.pack, use_128=args.use128)

@@ -46,7 +46,7 @@ GetUpperAndLowerBounds(
     return std::make_tuple(lower_bound, upper_bound, bits);
 }
 
-template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const bool Packed, const std::span<const AT, Count>& GapArray>
+template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed, const std::span<const AT, Count>& GapArray>
 static const std::optional<std::pair<T, T>>
 TrialDivisionRange(
     const T& N,
@@ -54,8 +54,9 @@ TrialDivisionRange(
     const T& EndValue
 )
 {
-    constexpr size_t GapsPerWord =  Packed ? 63 / BitSize : 64 / BitSize;
-    constexpr uint64_t GapsMask = Packed ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
+    constexpr size_t WordBits = sizeof(AT) * 8;
+    constexpr size_t GapsPerWord =  Packed == FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
+    constexpr uint64_t GapsMask = Packed == FastPack ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
 
     T candidate = StartValue;
 
@@ -102,7 +103,11 @@ TrialDivisionRange(
                         return std::make_pair(candidate, N / candidate);
                     }
 
-                    primetools::increment(candidate, gapword & GapsMask);
+                    if constexpr(Packed == DensePack) {
+                        primetools::increment(candidate, (gapword & GapsMask) << 1);
+                    } else {
+                        primetools::increment(candidate, gapword & GapsMask);
+                    }
 
                     gapword >>= BitSize;
                 }
@@ -124,19 +129,19 @@ TrialDivisionRange(
 {
     switch(Modulus) {
         case 223092870:
-            return TrialDivisionRange<T, 223092870, 5, __uint128_t, 1459815, true, WHEEL223092870GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 223092870, 5, __uint128_t, WHEEL223092870GAP_COUNT, FastPack, WHEEL223092870GAPS>(N, StartValue, EndValue);
         case 9699690:
-            return TrialDivisionRange<T, 9699690, 5, __uint128_t, 66356, true, WHEEL9699690GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 9699690, 5, __uint128_t, WHEEL9699690GAP_COUNT, FastPack, WHEEL9699690GAPS>(N, StartValue, EndValue);
         case 510510:
-            return TrialDivisionRange<T, 510510, 4, uint64_t, 6144, true, WHEEL510510GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack, WHEEL510510GAPS>(N, StartValue, EndValue);
         case 30030:
-            return TrialDivisionRange<T, 30030, 4, uint64_t, 384, true, WHEEL30030GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 30030, 4, uint64_t, WHEEL30030GAP_COUNT, DensePack, WHEEL30030GAPS>(N, StartValue, EndValue);
         case 2310:
-            return TrialDivisionRange<T, 2310, 4, uint64_t, 30, false, WHEEL2310GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 2310, 4, uint64_t, WHEEL2310GAP_COUNT, Unpacked, WHEEL2310GAPS>(N, StartValue, EndValue);
         case 210:
-            return TrialDivisionRange<T, 210, 4, uint64_t, 3, false, WHEEL210GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 210, 4, uint64_t, WHEEL210GAP_COUNT, Unpacked, WHEEL210GAPS>(N, StartValue, EndValue);
         case 30:
-            return TrialDivisionRange<T, 30, 4, uint64_t, 1, false, WHEEL30GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 30, 4, uint64_t, WHEEL30GAP_COUNT, Unpacked, WHEEL30GAPS>(N, StartValue, EndValue);
         default:
             std::cerr << "Error: Unsupported modulus for trial division: " << Modulus << std::endl;
             return std::nullopt;
