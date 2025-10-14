@@ -88,7 +88,8 @@ const bool isprime(
 )
 {
     // Select a K for the Miller-Rabin test based on N
-    return MillerRabin(N, 40);
+    return mpz_probab_prime_p(N.get_mpz_t(), 40) > 0;
+    // return MillerRabin(N, 40);
 }
 
 const mpz_class

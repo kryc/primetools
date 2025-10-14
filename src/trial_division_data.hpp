@@ -1,3 +1,6 @@
+#ifndef TRIAL_DIVISION_DATA_HPP
+#define TRIAL_DIVISION_DATA_HPP
+
 #include <cstdint>
 #include <span>
 
@@ -66,3 +69,5 @@ static const __uint128_t* WHEEL223092870GAPSDATA = reinterpret_cast<const __uint
 static const std::span<const __uint128_t, WHEEL223092870GAP_COUNT> WHEEL223092870GAPS(reinterpret_cast<const __uint128_t*>(WHEEL223092870GAPSDATA), WHEEL223092870GAP_COUNT);
 
 } // namespace primetools
+
+#endif // TRIAL_DIVISION_DATA_HPP

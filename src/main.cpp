@@ -7,6 +7,7 @@
 #include <gmpxx.h>
 
 #include "factorise.hpp"
+#include "prime.hpp"
 #include "util.hpp"
 
 template <typename T>
@@ -316,6 +317,48 @@ int main(
     else if (action == "moduli")
     {
         std::cout << "Supported wheel moduli: 30, 210, 2310, 30030, 510510, 9699690, 223092870" << std::endl;
+    }
+    else if (action == "nthprime")
+    {
+        if (argc != 3) {
+            std::cerr << "Usage: " << argv[0] << " nthprime <n>" << std::endl;
+            return 1;
+        }
+
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const size_t n = std::stoul(positionals[1]);
+        const mpz_class prime = primetools::GetNthPrime(n);
+        std::cout << "The " << n << (n % 10 == 1 && n % 100 != 11 ? "st" : (n % 10 == 2 && n % 100 != 12 ? "nd" : (n % 10 == 3 && n % 100 != 13 ? "rd" : "th"))) << " prime is " << prime << std::endl;
+    }
+    else if (action == "primerange")
+    {
+        if (argc != 4) {
+            std::cerr << "Usage: " << argv[0] << " primerange <start> <end>" << std::endl;
+            return 1;
+        }
+
+        if (!primetools::is_numeric(positionals[1]) || !primetools::is_numeric(positionals[2])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const mpz_class start(positionals[1]);
+        const mpz_class end(positionals[2]);
+
+        if (end < start) {
+            std::cerr << "Error: End must be greater than or equal to start." << std::endl;
+            return 1;
+        }
+
+        auto primes = primetools::GetPrimesInRange(start, end);
+        std::cout << "Primes in range [" << primetools::TruncateNumber(start) << ", " << primetools::TruncateNumber(end) << "]:" << std::endl;
+        for (const auto& prime : primes) {
+            std::cout << prime << std::endl;
+        }
     }
     else
     {
