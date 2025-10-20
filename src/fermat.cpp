@@ -4,7 +4,9 @@
 #include <array>
 #include <cinttypes>
 #include <iostream>
+#include <map>
 
+#include "util.hpp"
 
 namespace primetools {
 
@@ -159,15 +161,15 @@ FMMod20Precomp(
         return std::nullopt;
     }
 
-    static const uint32_t DIF_LUT[20] = {
-        0,       0x01040401, //  1 = { 1, 4, 4, 1 }
-        0,       0x02ff0602, //  3 = { 2, 6, -1, 2 }
-        0, 0, 0, 0x04ff0204, //  7 = { 4, 2, -1, 4 }
-        0,       0x03020203, //  9 = { 3, 2, 2, 3 }
-        0,       0x04020400, // 11 = { 0, 4, 2, 4 }
-        0,       0x03ff0403, // 13 = { 3, 4, -1, 3 }
-        0, 0, 0, 0x01ff0801, // 17 = { 1, 8, -1, 1 }
-        0,       0x02060200  // 19 = { 0, 2, 6, 2 }
+    static const std::map<uint64_t, uint64_t> DIF_LUT = {
+        {1,  0x1441144114411441}, //  1 = { 1, 4, 4, 1 }
+        {3,  0x2062206220622062}, //  3 = { 2, 6, -1, 2 }
+        {7,  0x4024402440244024}, //  7 = { 4, 2, -1, 4 }
+        {9,  0x3223322332233223}, //  9 = { 3, 2, 2, 3 }
+        {11, 0x4240424042404240}, // 11 = { 0, 4, 2, 4 }
+        {13, 0x3043304330433043}, // 13 = { 3, 4, -1, 3 }
+        {17, 0x1081108110811081}, // 17 = { 1, 8, -1, 1 }
+        {19, 0x2620262026202620}  // 19 = { 0, 2, 6, 2 }
     };
 
     mpz_class u = sqrt(N) + 1;
@@ -183,22 +185,18 @@ FMMod20Precomp(
     }
 
     const uint64_t r = mpz_fdiv_ui(N.get_mpz_t(), 20);
-    const uint32_t dif = DIF_LUT[r];
+    uint32_t gaps = DIF_LUT.at(r);
 
+    // Implement the cycle routine
     for (size_t i = 0; i < Max; i++)
     {
-        uint32_t d = dif;
-        // Implement the cycle routine
-        for (size_t j = 0; j < 4; j++, d >>= 8) {
-            if ((d & 0xff) == 0xff) {
-                continue;
-            }
-            u += (d & 0xff);
-            const mpz_class b = (u * u) - N;
-            if (mpz_perfect_square_p(b.get_mpz_t())) {
-                return std::make_pair(u - sqrt(b), u + sqrt(b));
-            }
+        primetools::increment(u, gaps & 0xf);
+        const mpz_class b = (u * u) - N;
+        if (mpz_perfect_square_p(b.get_mpz_t())) {
+            return std::make_pair(u - sqrt(b), u + sqrt(b));
         }
+        // Rotate the gaps
+        gaps = std::rotr(gaps, 4);
     }
 
     return std::nullopt;
