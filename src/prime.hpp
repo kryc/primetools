@@ -6,6 +6,7 @@
 #include <gmpxx.h>
 
 #include "trial_division_data.hpp"
+#include "util.hpp"
 
 namespace primetools {
 
@@ -50,7 +51,7 @@ GetPrimesInRange(
 )
 {
     if (Lower >= Upper) {
-        throw std::invalid_argument("Lower must be less than Upper");
+        return {};
     }
 
     std::vector<T> primes;
@@ -85,6 +86,58 @@ GetPrimesInRange(
         primetools::increment(candidate, gapword & 0xf);
         gapword = std::rotr(gapword, 4);
     } while (candidate <= Upper);
+
+    return primes;
+}
+
+template <typename T>
+std::vector<T>
+GetPrimesTo(
+    const T Upper
+)
+{
+    return GetPrimesInRange<T>(1, Upper);
+}
+
+template <typename T>
+std::vector<T>
+GetFirstNPrimes(
+    const T N
+)
+{
+    if (N == 0) {
+        throw std::invalid_argument("N must be greater than 0");
+    }
+
+    std::vector<T> primes;
+    primes.reserve(N);
+
+    if (N >= 1) {
+        primes.push_back(2);
+    }
+    if (N >= 2) {
+        primes.push_back(3);
+    }
+    if (N >= 3) {
+        primes.push_back(5);
+    }
+
+    if (N <= 3) {
+        return primes;
+    }
+
+    T candidate = 1;
+
+    // Use wheel30 to skip non-prime candidates
+    uint32_t gapword = primetools::WHEEL30GAPSUINT32;
+    do {
+        primetools::increment(candidate, gapword & 0xf);
+        gapword = std::rotr(gapword, 4);
+
+        if (primetools::isprime(candidate)) {
+            primes.push_back(candidate);
+        }
+    } while (primes.size() < N);
 
     return primes;
 }
