@@ -5,6 +5,7 @@
 #include <iostream>
 #include <optional>
 #include <variant>
+#include <vector>
 
 #include <gmpxx.h>
 
@@ -266,6 +267,13 @@ TrialDivisionRandomMT(
     const mpz_class& RangeLower = 0,
     const mpz_class& RangeUpper = 0,
     const size_t Modulus = 510510
+);
+
+const std::vector<__uint128_t>
+GenerateWheelGapsForModulus(
+    const size_t Modulus,
+    const size_t BitSize = 5,
+    const PackingType Packing = PackingType::FastPack
 );
 
 } // namespace primetools

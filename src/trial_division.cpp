@@ -2,6 +2,7 @@
 #include <bit>
 #include <cassert>
 #include <iostream>
+#include <numeric>
 #include <optional>
 #include <future>
 #include <vector>
@@ -9,6 +10,7 @@
 #include <thread>
 #include <mutex>
 
+#include "prime.hpp"
 #include "trial_division.hpp"
 
 namespace primetools {
@@ -246,6 +248,63 @@ TrialDivisionRandomMT(
     }
     
     return result;
+}
+
+const std::vector<__uint128_t>
+GenerateWheelGapsForModulus(
+    const size_t Modulus,
+    const size_t BitSize,
+    const PackingType Packing
+)
+{
+    const size_t GapsPerWord = (sizeof(__uint128_t) * 8 - 1) / BitSize;
+
+    size_t modulus = 1;
+    for (size_t prime = 1; modulus < Modulus; prime++) {
+        modulus *= primetools::GetNthPrime(prime);
+    }
+
+    if (modulus != Modulus) {
+        std::cerr << "Error: Unsupported modulus for trial division: " << Modulus << std::endl;
+        return {};
+    }
+
+    std::vector<__uint128_t> gaps;
+    __uint128_t next = 0;
+    size_t count = 0;
+    uint64_t last_residue = 1;
+    for (size_t i = 3; i < modulus; i += 2) {
+        if (std::gcd(i, modulus) != 1) {
+            continue;
+        }
+        const uint64_t residue = i;
+        const __uint128_t gap = residue - last_residue;
+        if (gap >= (1ULL << (BitSize + 1))) {
+            std::cerr << "Error: Gap exceeds bit size " << BitSize << " for modulus " << Modulus << std::endl;
+            return {};
+        }
+        const size_t shift = count++ * BitSize;
+        next |= gap << shift;
+        if (count == GapsPerWord) {
+            gaps.push_back(next);
+            next = 0;
+            count = 0;
+        }
+        last_residue = residue;
+    }
+
+    // Add the gap from the last residue back to the modulus
+    if (count > 0) {
+        const size_t shift = count * BitSize;
+        next |= (__uint128_t)(1 + (modulus - last_residue)) << shift;
+    }
+    else {
+        next = (1 + (modulus - last_residue));
+    }
+
+    gaps.push_back(next);
+
+    return gaps;
 }
 
 } // namespace primetools
