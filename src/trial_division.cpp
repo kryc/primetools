@@ -257,7 +257,8 @@ GenerateWheelGapsForModulus(
     const PackingType Packing
 )
 {
-    const size_t GapsPerWord = (sizeof(__uint128_t) * 8 - 1) / BitSize;
+    const size_t WordBits = sizeof(__uint128_t) * 8;
+    const size_t GapsPerWord = Packing == PackingType::FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
 
     size_t modulus = 1;
     for (size_t prime = 1; modulus < Modulus; prime++) {
@@ -273,19 +274,20 @@ GenerateWheelGapsForModulus(
     __uint128_t next = 0;
     size_t count = 0;
     uint64_t last_residue = 1;
-    for (size_t i = 3; i < modulus; i += 2) {
-        if (std::gcd(i, modulus) != 1) {
+    for (size_t residue = 3; residue < modulus; residue += 2) {
+        if (std::gcd(residue, modulus) != 1) {
             continue;
         }
-        const uint64_t residue = i;
-        const __uint128_t gap = residue - last_residue;
-        if (gap >= (1ULL << (BitSize + 1))) {
+        // std::cout << residue - last_residue << std::endl;
+        const __uint128_t gap = Packing == PackingType::Unpacked ? (residue - last_residue) : (residue - last_residue) >> 1;
+        if (gap > (1ULL << BitSize)) {
             std::cerr << "Error: Gap exceeds bit size " << BitSize << " for modulus " << Modulus << std::endl;
             return {};
         }
         const size_t shift = count++ * BitSize;
         next |= gap << shift;
         if (count == GapsPerWord) {
+            next <<= Packing == PackingType::FastPack ? 1 : 0;
             gaps.push_back(next);
             next = 0;
             count = 0;
@@ -294,14 +296,16 @@ GenerateWheelGapsForModulus(
     }
 
     // Add the gap from the last residue back to the modulus
+    const __uint128_t gap = Packing == PackingType::Unpacked ? (1 + (modulus - last_residue)) : (1 + (modulus - last_residue)) >> 1;
     if (count > 0) {
         const size_t shift = count * BitSize;
-        next |= (__uint128_t)(1 + (modulus - last_residue)) << shift;
+        next |= gap << shift;
     }
     else {
-        next = (1 + (modulus - last_residue));
+        next = gap;
     }
 
+    next <<= Packing == PackingType::FastPack ? 1 : 0;
     gaps.push_back(next);
 
     return gaps;
