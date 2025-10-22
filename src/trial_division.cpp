@@ -277,7 +277,8 @@ GenerateWheelGapsForModulus(
     __uint128_t next = 0;
     size_t count = 0;
     uint64_t last_residue = 1;
-    for (size_t residue = 3; residue < modulus; residue += 2) {
+    uint32_t wheel30Gaps = std::rotr(WHEEL30GAPSUINT32, 4);
+    for (size_t residue = 7; residue < modulus; residue += (wheel30Gaps & 0xf), wheel30Gaps = std::rotr(wheel30Gaps, 4)) {
         if (std::gcd(residue, modulus) != 1) {
             continue;
         }

@@ -40,7 +40,6 @@ TEST(TrialDivision, GenerateWheelGapsForModulus30FastPack)
         expected |= (__uint128_t)(ExpectedGaps30[i] >> 1) << shift;
     }
     expected <<= 1;
-    // Print hex for debugging
     auto gaps = primetools::GenerateWheelGapsForModulus(30, BitSize, primetools::PackingType::FastPack);
     ASSERT_EQ(gaps.size(), 1);
     EXPECT_EQ(gaps.at(0), expected);
