@@ -142,6 +142,24 @@ GetFirstNPrimes(
     return primes;
 }
 
+template <typename T>
+const uint64_t
+GetTrialDivisionModuliForPrime(
+    const T Prime
+)
+{
+    if (Prime < 2) {
+        throw std::invalid_argument("Prime must be greater than 1");
+    }
+
+    auto primes = primetools::GetPrimesTo<T>(Prime);
+    uint64_t modulus = 1;
+    for (const auto& p : primes) {
+        modulus *= p;
+    }
+    return modulus;
+}
+
 } // namespace primetools
 
 #endif // PRIME_HPP

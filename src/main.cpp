@@ -318,6 +318,27 @@ int main(
     {
         std::cout << "Supported wheel moduli: 30, 210, 2310, 30030, 510510, 9699690, 223092870" << std::endl;
     }
+    else if (action == "getmodulus")
+    {
+        if (argc != 3) {
+            std::cerr << "Usage: " << argv[0] << " getmodulus <prime>" << std::endl;
+            return 1;
+        }
+
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const uint64_t prime = std::stoull(positionals[1]);
+        if (prime < 2) {
+            std::cerr << "Error: Prime must be greater than 1." << std::endl;
+            return 1;
+        }
+
+        uint64_t moduli = primetools::GetTrialDivisionModuliForPrime(prime);
+        std::cout << "Trial division moduli for prime " << prime << ": " << moduli << std::endl;
+    }
     else if (action == "nthprime")
     {
         if (argc != 3) {

@@ -260,6 +260,8 @@ GenerateWheelGapsForModulus(
     const size_t WordBits = sizeof(__uint128_t) * 8;
     const size_t GapsPerWord = Packing == PackingType::FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
 
+    // Calculate the modulus using the first primes
+    // to ensure it is valid
     size_t modulus = 1;
     for (size_t prime = 1; modulus < Modulus; prime++) {
         modulus *= primetools::GetNthPrime(prime);
@@ -270,6 +272,7 @@ GenerateWheelGapsForModulus(
         return {};
     }
 
+    // Generate the gaps and pack them into uint128_t words
     std::vector<__uint128_t> gaps;
     __uint128_t next = 0;
     size_t count = 0;

@@ -16,6 +16,13 @@
 
 namespace primetools {
 
+const std::vector<__uint128_t>
+GenerateWheelGapsForModulus(
+    const size_t Modulus,
+    const size_t BitSize = 5,
+    const PackingType Packing = PackingType::FastPack
+);
+
 template <typename T>
 static inline
 const std::tuple<const T, const T, const size_t>
@@ -47,17 +54,19 @@ GetUpperAndLowerBounds(
     return std::make_tuple(lower_bound, upper_bound, bits);
 }
 
-template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed, const std::span<const AT, Count>& GapArray>
+template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed>
 static const std::optional<std::pair<T, T>>
 TrialDivisionRange(
     const T& N,
     const T& StartValue,
-    const T& EndValue
+    const T& EndValue,
+    const std::span<const AT, Count> GapArray
 )
 {
     constexpr size_t WordBits = sizeof(AT) * 8;
     constexpr size_t GapsPerWord =  Packed == FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
     constexpr uint64_t GapsMask = Packed == FastPack ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
+    // const size_t ArraySize = constexpr Count == std::dynamic_extent ? GapArray.size() : Count;
 
     T candidate = StartValue;
 
@@ -129,20 +138,34 @@ TrialDivisionRange(
 )
 {
     switch(Modulus) {
+        case 200560490130:
+        {
+            std::cout << "Generating wheel gaps for modulus " << Modulus << std::endl;
+            auto gaps = GenerateWheelGapsForModulus(Modulus, 5, FastPack);
+            std::cout << "Factorising using wheel" << Modulus << " factorization." << std::endl;
+            return TrialDivisionRange<T, 200560490130, 5, __uint128_t, std::dynamic_extent, FastPack>(N, StartValue, EndValue, gaps);
+        }
+        case 6469693230:
+        {
+            std::cout << "Generating wheel gaps for modulus " << Modulus << std::endl;
+            auto gaps = GenerateWheelGapsForModulus(Modulus, 5, FastPack);
+            std::cout << "Factorising using wheel" << Modulus << " factorization." << std::endl;
+            return TrialDivisionRange<T, 6469693230, 5, __uint128_t, std::dynamic_extent, FastPack>(N, StartValue, EndValue, gaps);
+        }
         case 223092870:
-            return TrialDivisionRange<T, 223092870, 5, __uint128_t, WHEEL223092870GAP_COUNT, FastPack, WHEEL223092870GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 223092870, 5, __uint128_t, WHEEL223092870GAP_COUNT, FastPack>(N, StartValue, EndValue, WHEEL223092870GAPS);
         case 9699690:
-            return TrialDivisionRange<T, 9699690, 5, __uint128_t, WHEEL9699690GAP_COUNT, FastPack, WHEEL9699690GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 9699690, 5, __uint128_t, WHEEL9699690GAP_COUNT, FastPack>(N, StartValue, EndValue, WHEEL9699690GAPS);
         case 510510:
-            return TrialDivisionRange<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack, WHEEL510510GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack>(N, StartValue, EndValue, WHEEL510510GAPS);
         case 30030:
-            return TrialDivisionRange<T, 30030, 4, uint64_t, WHEEL30030GAP_COUNT, DensePack, WHEEL30030GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 30030, 4, uint64_t, WHEEL30030GAP_COUNT, DensePack>(N, StartValue, EndValue, WHEEL30030GAPS);
         case 2310:
-            return TrialDivisionRange<T, 2310, 4, uint64_t, WHEEL2310GAP_COUNT, Unpacked, WHEEL2310GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 2310, 4, uint64_t, WHEEL2310GAP_COUNT, Unpacked>(N, StartValue, EndValue, WHEEL2310GAPS);
         case 210:
-            return TrialDivisionRange<T, 210, 4, uint64_t, WHEEL210GAP_COUNT, Unpacked, WHEEL210GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 210, 4, uint64_t, WHEEL210GAP_COUNT, Unpacked>(N, StartValue, EndValue, WHEEL210GAPS);
         case 30:
-            return TrialDivisionRange<T, 30, 4, uint64_t, WHEEL30GAP_COUNT, Unpacked, WHEEL30GAPS>(N, StartValue, EndValue);
+            return TrialDivisionRange<T, 30, 4, uint64_t, WHEEL30GAP_COUNT, Unpacked>(N, StartValue, EndValue, WHEEL30GAPS);
         default:
             std::cerr << "Error: Unsupported modulus for trial division: " << Modulus << std::endl;
             return std::nullopt;
@@ -267,13 +290,6 @@ TrialDivisionRandomMT(
     const mpz_class& RangeLower = 0,
     const mpz_class& RangeUpper = 0,
     const size_t Modulus = 510510
-);
-
-const std::vector<__uint128_t>
-GenerateWheelGapsForModulus(
-    const size_t Modulus,
-    const size_t BitSize = 5,
-    const PackingType Packing = PackingType::FastPack
 );
 
 } // namespace primetools
