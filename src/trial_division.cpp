@@ -212,8 +212,10 @@ TrialDivisionRandomMTWorker(
 
     mpz_class start_block = 0;
     while (!Found.load(std::memory_order_relaxed)) {
-        start_block += prng.Next();
-        start_block %= threads_chunks;
+        primetools::increment(start_block, prng.Next());
+        if (start_block > threads_chunks) {
+            mpz_mod(start_block.get_mpz_t(), start_block.get_mpz_t(), threads_chunks.get_mpz_t());
+        }
         mpz_class thread_start = thread_lower + (start_block * ChunkSize);
         mpz_class thread_end = thread_start + ChunkSize;
         assert(thread_start >= thread_lower && thread_end <= thread_upper);
