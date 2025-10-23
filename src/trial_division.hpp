@@ -16,11 +16,9 @@
 
 namespace primetools {
 
-const std::vector<__uint128_t>
-GenerateWheelGapsForModulus(
-    const size_t Modulus,
-    const size_t BitSize = 5,
-    const PackingType Packing = PackingType::FastPack
+const std::span<const __uint128_t>
+GetWheelGapsForModulus(
+    const size_t Modulus
 );
 
 template <typename T>
@@ -141,14 +139,14 @@ TrialDivisionRange(
         case 200560490130:
         {
             std::cout << "Generating wheel gaps for modulus " << Modulus << std::endl;
-            auto gaps = GenerateWheelGapsForModulus(Modulus, 5, FastPack);
+            auto& gaps = GetWheelGapsForModulus(Modulus);
             std::cout << "Factorising using wheel" << Modulus << " factorization." << std::endl;
             return TrialDivisionRange<T, 200560490130, 5, __uint128_t, std::dynamic_extent, FastPack>(N, StartValue, EndValue, gaps);
         }
         case 6469693230:
         {
             std::cout << "Generating wheel gaps for modulus " << Modulus << std::endl;
-            auto gaps = GenerateWheelGapsForModulus(Modulus, 5, FastPack);
+            auto& gaps = GetWheelGapsForModulus(Modulus);
             std::cout << "Factorising using wheel" << Modulus << " factorization." << std::endl;
             return TrialDivisionRange<T, 6469693230, 5, __uint128_t, std::dynamic_extent, FastPack>(N, StartValue, EndValue, gaps);
         }
@@ -290,6 +288,13 @@ TrialDivisionRandomMT(
     const mpz_class& RangeLower = 0,
     const mpz_class& RangeUpper = 0,
     const size_t Modulus = 510510
+);
+
+const std::vector<__uint128_t>
+GenerateWheelGapsForModulus(
+    const size_t Modulus,
+    const size_t BitSize = 5,
+    const PackingType Packing = PackingType::FastPack
 );
 
 } // namespace primetools

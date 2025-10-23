@@ -1,14 +1,15 @@
 #include <array>
+#include <atomic>
 #include <bit>
 #include <cassert>
+#include <future>
 #include <iostream>
+#include <map>
+#include <mutex>
 #include <numeric>
 #include <optional>
-#include <future>
-#include <vector>
-#include <atomic>
 #include <thread>
-#include <mutex>
+#include <vector>
 
 #include "prime.hpp"
 #include "trial_division.hpp"
@@ -17,6 +18,9 @@ namespace primetools {
 
 // Mutex for thread-safe status output
 std::mutex status_mutex;
+// Mutex for getting generated modulus wheels
+std::mutex wheels_mutex;
+std::map<size_t, std::vector<__uint128_t>> generated_wheels;
 
 // Worker function for TrialDivisionMT
 std::optional<std::pair<mpz_class, mpz_class>>
@@ -170,21 +174,33 @@ TrialDivisionRandomMTWorker(
     const size_t Modulus,
     const size_t ChunkSize,
     const size_t ThreadID,
+    const size_t NumThreads,
     std::atomic<bool>& Found
 ) {
-    // Initialize the PRNG
-    gmp_randstate_t state;
-    gmp_randinit_default(state);
-    gmp_randseed_ui(state, ThreadID + 1);
+    // Split the search space into NumThreads parts
+    const mpz_class threads_chunks = (Chunks + NumThreads - 1) / NumThreads;
+    const mpz_class thread_lower = LowerBound + (threads_chunks * ThreadID * ChunkSize);
+    const mpz_class thread_upper = thread_lower + (threads_chunks * ChunkSize);
 
-    mpz_class start_block;
+    {
+        std::lock_guard<std::mutex> lock(status_mutex);
+        std::cout << "Thread " << ThreadID << " searching in range [" << thread_lower << ", " <<
+            thread_upper << "] with " << threads_chunks << " chunks." << std::endl;
+    }
+
+    // Initialize the PRNG
+    MiniPRNG64 prng(ThreadID);
+
+    mpz_class start_block = 0;
     while (!Found.load(std::memory_order_relaxed)) {
-        mpz_urandomm(start_block.get_mpz_t(), state, Chunks.get_mpz_t());
-        mpz_class thread_start = LowerBound + (start_block * ChunkSize);
+        start_block += prng.Next();
+        start_block %= threads_chunks;
+        mpz_class thread_start = thread_lower + (start_block * ChunkSize);
         mpz_class thread_end = thread_start + ChunkSize;
+        assert(thread_start >= thread_lower && thread_end <= thread_upper);
         // {
         //     std::lock_guard<std::mutex> lock(status_mutex);
-        //     std::cout << '\r' << "Trying block index " << start_block << std::flush;
+        //     std::cout << '\r' << "Trying block index " << start_block << "/" << threads_chunks << std::flush;
         // }
         auto result = TrialDivisionRange<mpz_class>(N, thread_start, thread_end, Modulus);
         if (result) {
@@ -234,6 +250,7 @@ TrialDivisionRandomMT(
             Modulus,
             chunk_size,
             i,
+            num_threads,
             std::ref(found)
         ));
     }
@@ -313,6 +330,21 @@ GenerateWheelGapsForModulus(
     gaps.push_back(next);
 
     return gaps;
+}
+
+const std::span<const __uint128_t>
+GetWheelGapsForModulus(
+    const size_t Modulus
+)
+{
+    std::lock_guard<std::mutex> lock(wheels_mutex);
+    auto it = generated_wheels.find(Modulus);
+    if (it != generated_wheels.end()) {
+        return it->second;
+    }
+    auto gaps = GenerateWheelGapsForModulus(Modulus, 5, PackingType::FastPack);
+    generated_wheels[Modulus] = std::move(gaps);
+    return generated_wheels[Modulus];
 }
 
 } // namespace primetools
