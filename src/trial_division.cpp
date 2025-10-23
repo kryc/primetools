@@ -22,6 +22,18 @@ std::mutex status_mutex;
 std::mutex wheels_mutex;
 std::map<size_t, std::vector<__uint128_t>> generated_wheels;
 
+static constexpr size_t DefaultBlockSize = 1'000'000;
+
+static const size_t
+RoundBlockSizeToModulus(
+    const size_t BlockSize,
+    const size_t Modulus
+)
+{
+    size_t rounded_size = ((BlockSize + Modulus - 1) / Modulus) * Modulus;
+    return rounded_size;
+}
+
 // Worker function for TrialDivisionMT
 std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionMTWorker(
@@ -33,7 +45,8 @@ TrialDivisionMTWorker(
     const size_t ThreadId,
     const size_t NumThreads,
     const size_t Modulus,
-    std::atomic<bool>& Found
+    std::atomic<bool>& Found,
+    mpz_class& CurrentChunk
 ) {
     mpz_class thread_start = LowerBound + (ThreadId * ChunkSize);
     mpz_class thread_end = thread_start + ChunkSize;
@@ -41,8 +54,11 @@ TrialDivisionMTWorker(
         mpz_class chunk_index = (thread_start - LowerBound) / ChunkSize;
         {
             std::lock_guard<std::mutex> lock(status_mutex);
-            std::cout << '\r' << "Chunk " << chunk_index << " of " << Chunks << " (" <<
-                (chunk_index * 100) / Chunks << "%) " << std::flush;
+            if (chunk_index > CurrentChunk) {
+                CurrentChunk = chunk_index;
+            }
+            std::cout << '\r' << "Chunk " << CurrentChunk << " of " << Chunks << " (" <<
+                (CurrentChunk * 100) / Chunks << "%) " << std::flush;
         }
         auto result = TrialDivisionRange<mpz_class>(N, thread_start, thread_end, Modulus);
         if (result) {
@@ -70,7 +86,7 @@ TrialDivisionMT(
 {
     // Use hardware concurrency if Threads == 0
     const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
-    const size_t block_size = BlockSize ? BlockSize : 512;
+    const size_t block_size = RoundBlockSizeToModulus(BlockSize ? BlockSize : DefaultBlockSize, Modulus);
 
     // Get upper and lower bounds
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<mpz_class>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
@@ -85,6 +101,8 @@ TrialDivisionMT(
     std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber(lower_bound) << ", " << primetools::TruncateNumber(upper_bound) <<
             "] using modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
 
+    mpz_class current_chunk = 0;
+
     for (size_t i = 0; i < num_threads; i++) {
         futures.emplace_back(std::async(std::launch::async, TrialDivisionMTWorker,
             std::cref(N),
@@ -95,7 +113,8 @@ TrialDivisionMT(
             i,
             num_threads,
             Modulus,
-            std::ref(found)
+            std::ref(found),
+            std::ref(current_chunk)
         ));
     }
 
@@ -226,7 +245,7 @@ TrialDivisionRandomMT(
 {
     // Use hardware concurrency if Threads == 0
     const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
-    const size_t block_size = BlockSize ? BlockSize : 512;
+    const size_t block_size = RoundBlockSizeToModulus(BlockSize ? BlockSize : DefaultBlockSize, Modulus);
 
     std::atomic<bool> found{false};
     std::vector<std::future<std::optional<std::pair<mpz_class, mpz_class>>>> futures;
@@ -239,7 +258,7 @@ TrialDivisionRandomMT(
     mpz_class diff = upper_bound - lower_bound;
     mpz_class chunks = diff / chunk_size;
 
-    std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber(lower_bound) << ", " << primetools::TruncateNumber(upper_bound) <<
+    std::cout << "Trying factorization of " << bits << "-bit primes in range [" << primetools::TruncateNumber(lower_bound) << ", " << primetools::TruncateNumber(upper_bound) <<
             "] using random block search with modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
 
     for (size_t i = 0; i < num_threads; i++) {
