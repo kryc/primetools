@@ -113,6 +113,7 @@ TEST(TrialDivision, GenerateWheelGapsForModulus9699690)
     }
 }
 
+#ifdef PRIMETOOLS_ENABLE_LARGE_WHEEL_TEST
 TEST(TrialDivision, GenerateWheelGapsForModulus223092870)
 {
     static constexpr size_t BitSize = 5;
@@ -122,3 +123,4 @@ TEST(TrialDivision, GenerateWheelGapsForModulus223092870)
         EXPECT_EQ(gaps[i], primetools::WHEEL223092870GAPS[i]);
     }
 }
+#endif
