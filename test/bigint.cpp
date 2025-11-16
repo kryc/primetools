@@ -200,6 +200,83 @@ TEST(BigIntAVX, AddEquals)
     }
 }
 
+TEST(BigIntAVX, SubtractEquals)
+{
+    BigIntAVX<1024> big;
+
+    big = 100;
+    big -= 50;
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 50u);
+        EXPECT_EQ(big.lane_word(lane, 1), 0u);
+    }
+
+    big = 0xFFFFFFFFull; // 2^32 - 1
+    big += 1;
+    EXPECT_EQ(big.lane_word(0, 0), 0u);
+    EXPECT_EQ(big.lane_word(0, 1), 1u);
+    big -= 1;
+    EXPECT_EQ(big.lane_word(0, 0), 0xFFFFFFFFu);
+    EXPECT_EQ(big.lane_word(0, 1), 0u);
+
+    big = 0xFFFFFFFFFFFFFFFFull; // 2^64 - 1
+    big += 1;
+    EXPECT_EQ(big.lane_word(0, 0), 0u);
+    EXPECT_EQ(big.lane_word(0, 1), 0u);
+    EXPECT_EQ(big.lane_word(0, 2), 1u);
+    big -= 1;
+    EXPECT_EQ(big.lane_word(0, 0), 0xFFFFFFFFu);
+    EXPECT_EQ(big.lane_word(0, 1), 0xFFFFFFFFu);
+    EXPECT_EQ(big.lane_word(0, 2), 0u);
+
+    BigIntAVX<1024> big2;
+    big = 100;
+    big2 = 50;
+    big -= big2;
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 50u);
+        EXPECT_EQ(big.lane_word(lane, 1), 0u);
+    }
+
+    big = 0xFFFFFFFFFFFFFFFFull; // 2^64 - 1
+    big2 = 1;
+    big -= big2;
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 0xFFFFFFFEu);
+        EXPECT_EQ(big.lane_word(lane, 1), 0xFFFFFFFFu);
+    }
+}
+
+TEST(BigIntAVX, LeftShift)
+{
+    BigIntAVX<1024> big;
+
+    // Initialize all lanes to 1
+    big = 1;
+
+    // Shift left by 1
+    big <<= 1;
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 2u);
+        EXPECT_EQ(big.lane_word(lane, 1), 0u);
+    }
+
+    // Shift left by 31 more (total 32)
+    big <<= 31;
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 0u);
+        EXPECT_EQ(big.lane_word(lane, 1), 1u);
+    }
+
+    // Shift left by 32 more (total 64)
+    big <<= 32;
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 0u);
+        EXPECT_EQ(big.lane_word(lane, 1), 0u);
+        EXPECT_EQ(big.lane_word(lane, 2), 1u);
+    }
+}
+
 TEST(BigIntAVX, Divides)
 {
     BigIntAVX<1024> big1, big2;

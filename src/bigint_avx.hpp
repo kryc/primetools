@@ -54,15 +54,8 @@ public:
         return tmp[lane];
     }
 
-    // Assign each lane from span<uint64_t> as a little-endian integer.
-    // src[lane] is interpreted as a 64-bit value for that lane; remaining
-    // higher limbs stay zero.
     BigIntAVX& operator=(std::span<const uint64_t> src) {
-        // zero all limbs/lanes
-        for (size_t w = 0; w < NumWords; ++w) {
-            limbs[w] = _mm512_setzero_si512();
-        }
-        if (src.empty()) return *this;
+        std::fill(limbs.begin(), limbs.end(), _mm512_setzero_si512());
         size_t lanes_to_fill = std::min(src.size(), static_cast<size_t>(NumLanes));
 
         // low 32 bits limb 0
@@ -84,8 +77,6 @@ public:
         }
         return *this;
     }
-
-    // Assign from mpz_class in span
     BigIntAVX& operator=(std::span<const mpz_class> vals) {
         for (size_t w = 0; w < NumWords; ++w) {
             limbs[w] = _mm512_setzero_si512();
@@ -104,8 +95,6 @@ public:
         }
         return *this;
     }
-
-    // Assign a single mpz_class to all lanes
     BigIntAVX& operator=(const mpz_class& val) {
         for (size_t w = 0; w < NumWords; ++w) {
             alignas(64) uint32_t lane_vals[NumLanes];
@@ -117,9 +106,18 @@ public:
         }
         return *this;
     }
+    BigIntAVX& operator=(const uint64_t val) {
+        std::fill(limbs.begin(), limbs.end(), _mm512_setzero_si512());
+        __m512i lane_vals = _mm512_set1_epi32(static_cast<int32_t>(val));
+        limbs[0] = lane_vals;
+        if (NumWords > 1) {
+            __m512i lane_vals_high = _mm512_set1_epi32(static_cast<int32_t>(val >> 32));
+            limbs[1] = lane_vals_high;
+        }
+        return *this;
+    }
 
-    // Add a scalar uint32_t to all lanes with carry propagation across 32-bit limbs.
-    BigIntAVX& operator+=(uint32_t other) {
+    BigIntAVX& operator+=(const uint32_t other) {
         const __m512i zero  = _mm512_setzero_si512();
         __m512i carry       = _mm512_set1_epi32(static_cast<int32_t>(other)); // initial delta=other
 
@@ -135,6 +133,88 @@ public:
             limbs[w] = sum;
             carry = _mm512_mask_set1_epi32(zero, carry_mask, 1); // next delta = carry (0/1)
         }
+        return *this;
+    }
+
+    BigIntAVX& operator-=(const uint32_t other) {
+        const __m512i zero  = _mm512_setzero_si512();
+        __m512i borrow      = _mm512_set1_epi32(static_cast<int32_t>(other)); // initial delta=other
+
+        for (size_t w = 0; w < NumWords; ++w) {
+            if (w != 0 && _mm512_test_epi32_mask(borrow, borrow) == 0) {
+                break; // no borrow left to propagate
+            }
+
+            const __m512i limb = limbs[w];
+            const __m512i diff  = _mm512_sub_epi32(limb, borrow);
+            const __mmask16 borrow_mask = _mm512_cmp_epu32_mask(limb, diff, _MM_CMPINT_LT);
+
+            limbs[w] = diff;
+            borrow = _mm512_mask_set1_epi32(zero, borrow_mask, 1);
+        }
+        return *this;
+    }
+    BigIntAVX& operator-=(const BigIntAVX& other) {
+        const __m512i zero  = _mm512_setzero_si512();
+        __m512i borrow      = _mm512_setzero_si512(); // initial delta=0
+
+        for (size_t w = 0; w < NumWords; ++w) {
+            const __m512i a = limbs[w];
+            const __m512i b = other.limbs[w];
+
+            // a - b
+            __m512i diff = _mm512_sub_epi32(a, b);
+            // Detect per-lane borrow: a < b
+            __mmask16 this_borrow = _mm512_cmp_epu32_mask(a, b, _MM_CMPINT_LT);
+
+            // Apply existing borrow into a: if borrow_mask set, subtract 1
+            __m512i borrow_vec = _mm512_mask_set1_epi32(zero, this_borrow, 1);
+            diff = _mm512_sub_epi32(diff, borrow_vec);
+
+            // New borrow is: (a < b) OR (a == b AND previous borrow)
+            __mmask16 equal_mask = _mm512_cmp_epu32_mask(a, b, _MM_CMPINT_EQ);
+            __mmask16 new_borrow_mask = this_borrow | (equal_mask & _mm512_cmp_epu32_mask(borrow, zero, _MM_CMPINT_NE));
+
+            limbs[w] = diff;
+            borrow = _mm512_mask_set1_epi32(zero, new_borrow_mask, 1); // next delta = borrow (0/1)
+        }
+        return *this;
+    }
+
+    BigIntAVX& operator<<=(size_t shift) {
+        if (shift == 0) return *this;
+        size_t limb_shift = shift / 32;
+        size_t bit_shift = shift % 32;
+
+        if (limb_shift >= NumWords) {
+            // Shift exceeds size, zero all
+            for (size_t w = 0; w < NumWords; ++w) {
+                limbs[w] = _mm512_setzero_si512();
+            }
+            return *this;
+        }
+
+        if (bit_shift == 0) {
+            // Limb-aligned shift
+            for (size_t w = NumWords; w-- > limb_shift;) {
+                limbs[w] = limbs[w - limb_shift];
+            }
+        } else {
+            // Bit shift with carry between limbs
+            for (size_t w = NumWords; w-- > limb_shift + 1;) {
+                __m512i high_part = _mm512_srli_epi32(limbs[w - limb_shift - 1], 32 - bit_shift);
+                __m512i low_part  = _mm512_slli_epi32(limbs[w - limb_shift], bit_shift);
+                limbs[w] = _mm512_or_si512(low_part, high_part);
+            }
+            // Handle the first shifted limb separately
+            limbs[limb_shift] = _mm512_slli_epi32(limbs[0], bit_shift);
+        }
+
+        // Zero out the lower limbs
+        for (size_t w = 0; w < limb_shift; ++w) {
+            limbs[w] = _mm512_setzero_si512();
+        }
+
         return *this;
     }
 
