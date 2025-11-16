@@ -206,8 +206,15 @@ int main(
         std::cout << "Random prime factorization of " << primetools::TruncateNumber(n) << std::endl;
 
         if (threads == 0 || threads > 1) {
-            auto result = primetools::TrialDivisionRandomMT(n, threads, blocksize, !noguess, bits, start, end, modulus);
-            OutputFactors(result);
+            if (primetools::fits_uint128(n)) {
+                auto result = primetools::TrialDivisionRandomMT<__uint128_t>(primetools::mpz_to_uint128(n), threads, blocksize, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), modulus);
+                OutputFactors(result);
+            }
+            else
+            {
+                auto result = primetools::TrialDivisionRandomMT<mpz_class>(n, threads, blocksize, !noguess, bits, start, end, modulus);
+                OutputFactors(result);
+            }
         }
         else {
             auto result = primetools::TrialDivisionRandom(n, !noguess, bits, start, end, seed, modulus, max_iterations);
@@ -248,13 +255,28 @@ int main(
             OutputFactors(result);
         }
         else if (threads == 0 || threads > 1) {
-            auto result = primetools::TrialDivisionMT(n, threads, blocksize, !noguess, bits, start, end, modulus);
-            OutputFactors(result);
+            if (primetools::fits_uint128(n)) {
+                auto result = primetools::TrialDivisionMT<__uint128_t>(primetools::mpz_to_uint128(n), threads, blocksize, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), modulus);
+                OutputFactors(result);
+            }
+            else
+            {
+                auto result = primetools::TrialDivisionMT(n, threads, blocksize, !noguess, bits, start, end, modulus);
+                OutputFactors(result);
+            }
         }
         else {
             if (n.fits_ulong_p()) {
                 auto result = primetools::TrialDivision<uint64_t>(n.get_ui(), modulus, !noguess, bits, start.get_ui(), end.get_ui());
                 OutputFactors(result);
+            }
+            // Check if it fits a __uint128t
+            else if( primetools::fits_uint128(n) )
+            {
+                __uint128_t n128 = primetools::mpz_to_uint128(n);
+                auto result = primetools::TrialDivision<__uint128_t>(n128, modulus, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end));
+                OutputFactors(result);
+            
             }
             else
             {

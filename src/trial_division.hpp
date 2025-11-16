@@ -2,11 +2,17 @@
 #define TRIAL_DIVISION_HPP
 
 #include <array>
+#include <atomic>
+#include <future>
 #include <iostream>
+#include <mutex>
 #include <optional>
+#include <span>
+#include <thread>
 #include <variant>
 #include <vector>
 
+#include <assert.h>
 #include <gmpxx.h>
 
 #include "analyse.hpp"
@@ -138,16 +144,12 @@ TrialDivisionRange(
     switch(Modulus) {
         case 200560490130:
         {
-            std::cout << "Generating wheel gaps for modulus " << Modulus << std::endl;
             auto& gaps = GetWheelGapsForModulus(Modulus);
-            std::cout << "Factorising using wheel" << Modulus << " factorization." << std::endl;
             return TrialDivisionRange<T, 200560490130, 5, __uint128_t, std::dynamic_extent, FastPack>(N, StartValue, EndValue, gaps);
         }
         case 6469693230:
         {
-            std::cout << "Generating wheel gaps for modulus " << Modulus << std::endl;
             auto& gaps = GetWheelGapsForModulus(Modulus);
-            std::cout << "Factorising using wheel" << Modulus << " factorization." << std::endl;
             return TrialDivisionRange<T, 6469693230, 5, __uint128_t, std::dynamic_extent, FastPack>(N, StartValue, EndValue, gaps);
         }
         case 223092870:
@@ -242,6 +244,240 @@ TrialDivisionBitflip(
     return std::nullopt;
 };
 
+static constexpr size_t DefaultBlockSize = 1'000'000;
+
+static const size_t
+RoundBlockSizeToModulus(
+    const size_t BlockSize,
+    const size_t Modulus
+)
+{
+    size_t rounded_size = ((BlockSize + Modulus - 1) / Modulus) * Modulus;
+    return rounded_size;
+}
+
+// Worker function for TrialDivisionMT
+template <typename T>
+std::optional<std::pair<T, T>>
+TrialDivisionMTWorker(
+    const T& N,
+    const T& LowerBound,
+    const T& UpperBound,
+    const T& ChunkSize,
+    const T& Chunks,
+    const size_t ThreadId,
+    const size_t NumThreads,
+    const size_t Modulus,
+    std::atomic<bool>& Found,
+    T& CurrentChunk,
+    std::mutex& StatusMutex
+) {
+    T thread_start = LowerBound + (ThreadId * ChunkSize);
+    T thread_end = thread_start + ChunkSize;
+    while (!Found.load(std::memory_order_relaxed) && thread_start <= UpperBound) {
+        T chunk_index = (thread_start - LowerBound) / ChunkSize;
+        {
+            std::lock_guard<std::mutex> lock(StatusMutex);
+            if (chunk_index > CurrentChunk) {
+                CurrentChunk = chunk_index;
+            }
+            std::cout << '\r' << "Chunk " << CurrentChunk << " of " << Chunks << " (" <<
+                (CurrentChunk * 100) / Chunks << "%) " << std::flush;
+        }
+        auto result = TrialDivisionRange<T>(N, thread_start, thread_end, Modulus);
+        if (result) {
+            Found.store(true, std::memory_order_relaxed);
+            return result;
+        }
+        std::this_thread::yield();
+        primetools::increment(thread_start, NumThreads * ChunkSize);
+        primetools::increment(thread_end, NumThreads * ChunkSize);
+    }
+    return std::nullopt;
+}
+
+template <typename T>
+const std::optional<std::pair<T, T>>
+TrialDivisionMT(
+    const T& N,
+    const size_t Threads,
+    const size_t BlockSize,
+    const bool GuessSize,
+    const size_t Bits,
+    const T& RangeLower,
+    const T& RangeUpper,
+    const size_t Modulus
+)
+{
+    // Use hardware concurrency if Threads == 0
+    const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
+    const T block_size = RoundBlockSizeToModulus(BlockSize ? BlockSize : DefaultBlockSize, Modulus);
+
+    // Get upper and lower bounds
+    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
+
+    std::atomic<bool> found{false};
+    std::vector<std::future<std::optional<std::pair<T, T>>>> futures;
+
+    // const T chunk_size = Modulus * block_size;
+    const T diff = upper_bound - lower_bound;
+    const T chunks = (diff / block_size);
+
+    std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber<T>(lower_bound) << ", " << primetools::TruncateNumber<T>(upper_bound) <<
+            "] using modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
+
+    T current_chunk = 0;
+
+    // Mutex for thread-safe status output
+    std::mutex status_mutex;
+
+    for (size_t i = 0; i < num_threads; i++) {
+        futures.emplace_back(std::async(std::launch::async, TrialDivisionMTWorker<T>,
+            std::cref(N),
+            std::cref(lower_bound),
+            std::cref(upper_bound),
+            std::cref(block_size),
+            std::cref(chunks),
+            i,
+            num_threads,
+            Modulus,
+            std::ref(found),
+            std::ref(current_chunk),
+            std::ref(status_mutex)
+        ));
+    }
+
+    std::optional<std::pair<T, T>> result;
+    for (auto& fut : futures) {
+        auto res = fut.get();
+        if (res) {
+            result = res;
+            break;
+        }
+    }
+
+    // Terminate the status line
+    std::cout << std::endl;
+    return result;
+}
+
+// Worker function for TrialDivisionRandomMT
+template <typename T>
+std::optional<std::pair<T, T>>
+TrialDivisionRandomMTWorker(
+    const T& N,
+    const T& LowerBound,
+    const T& Chunks,
+    const size_t Modulus,
+    const T& ChunkSize,
+    const size_t ThreadID,
+    const size_t NumThreads,
+    std::atomic<bool>& Found,
+    std::mutex& StatusMutex
+) {
+    // Split the search space into NumThreads parts
+    const T threads_chunks = (Chunks + NumThreads - 1) / NumThreads;
+    const T thread_lower = LowerBound + (threads_chunks * ThreadID * ChunkSize);
+    const T thread_upper = thread_lower + (threads_chunks * ChunkSize);
+
+    {
+        std::lock_guard<std::mutex> lock(StatusMutex);
+        std::cout << "Thread " << ThreadID << " searching in range [" << thread_lower << ", " <<
+            thread_upper << "] with " << threads_chunks << " chunks." << std::endl;
+    }
+
+    // Initialize the PRNG
+    MiniPRNG64 prng(ThreadID);
+
+    T start_block = 0;
+    while (!Found.load(std::memory_order_relaxed)) {
+        primetools::increment(start_block, prng.Next());
+        // primetools::increment(start_block, 1);
+        if (start_block > threads_chunks) {
+            start_block %= threads_chunks;
+        }
+        T thread_start = thread_lower + (start_block * ChunkSize);
+        T thread_end = thread_start + ChunkSize;
+        assert(thread_start >= thread_lower && thread_end <= thread_upper);
+        // {
+        //     std::lock_guard<std::mutex> lock(StatusMutex);
+        //     std::cout << '\r' << "Trying block index " << start_block << "/" << threads_chunks << std::flush;
+        // }
+        auto result = TrialDivisionRange<T>(N, thread_start, thread_end, Modulus);
+        if (result) {
+            Found.store(true, std::memory_order_relaxed);
+            return result;
+        }
+        std::this_thread::yield();
+    }
+    return std::nullopt;
+}
+
+template <typename T>
+const std::optional<std::pair<T, T>>
+TrialDivisionRandomMT(
+    const T& N,
+    const size_t Threads,
+    const size_t BlockSize,
+    const bool GuessSize,
+    const size_t Bits,
+    const T& RangeLower,
+    const T& RangeUpper,
+    const size_t Modulus
+)
+{
+    // Use hardware concurrency if Threads == 0
+    const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
+    const size_t block_size = RoundBlockSizeToModulus(BlockSize ? BlockSize : DefaultBlockSize, Modulus);
+
+    std::atomic<bool> found{false};
+    std::vector<std::future<std::optional<std::pair<T, T>>>> futures;
+
+    // Get bounds and bits
+    auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
+
+    // Calculate the number of Modulus-sized blocks
+    T diff = upper_bound - lower_bound;
+    T chunks = diff / block_size;
+
+    assert(chunks > 0);
+
+    std::cout << chunks << " chunks of size " << block_size << " (" << block_size << " multiples of Modulus)" << std::endl;
+
+    // Reude thread count if there are fewer chunks than threads
+    const size_t effective_threads = chunks < num_threads ? primetools::get_ui(chunks) : num_threads;
+
+    std::mutex status_mutex;
+
+    std::cout << "Trying factorization of " << bits << "-bit primes in range [" << primetools::TruncateNumber(lower_bound) << ", " << primetools::TruncateNumber(upper_bound) <<
+            "] using random block search with modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
+
+    for (size_t i = 0; i < effective_threads; i++) {
+        futures.emplace_back(std::async(std::launch::async, TrialDivisionRandomMTWorker<T>,
+            std::cref(N),
+            std::cref(lower_bound),
+            std::cref(chunks),
+            Modulus,
+            block_size,
+            i,
+            effective_threads,
+            std::ref(found),
+            std::ref(status_mutex)
+        ));
+    }
+
+    std::optional<std::pair<T, T>> result;
+    for (auto& fut : futures) {
+        auto res = fut.get();
+        if (res) {
+            result = res;
+            break;
+        }
+    }
+    
+    return result;
+}
+
 const std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionRandom(
     const mpz_class& N,
@@ -265,30 +501,6 @@ inline std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionLinear(const T& N, const size_t Base, const size_t MaxIterations) {
     return TrialDivisionWheel510510<T>(N, MaxIterations);
 }
-
-const std::optional<std::pair<mpz_class, mpz_class>>
-TrialDivisionMT(
-    const mpz_class& N,
-    const size_t Threads = 0,
-    const size_t BlockSize = 0,
-    const bool GuessSize = true,
-    const size_t Bits = 0,
-    const mpz_class& RangeLower = 0,
-    const mpz_class& RangeUpper = 0,
-    const size_t Modulus = 510510
-);
-
-const std::optional<std::pair<mpz_class, mpz_class>>
-TrialDivisionRandomMT(
-    const mpz_class& N,
-    const size_t Threads = 0,
-    const size_t BlockSize = 0,
-    const bool GuessSize = true,
-    const size_t Bits = 0,
-    const mpz_class& RangeLower = 0,
-    const mpz_class& RangeUpper = 0,
-    const size_t Modulus = 510510
-);
 
 const std::vector<__uint128_t>
 GenerateWheelGapsForModulus(

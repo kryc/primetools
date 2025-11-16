@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <ostream>
 
 #include <stdint.h>
 #include <gmp.h>
@@ -14,14 +15,57 @@
 #include "euclid.hpp"
 #include "miller_rabin.hpp"
 
+// Convert __uint128_t to string (base 10)
+inline std::string uint128_to_string(__uint128_t value) {
+    if (value == 0) return "0";
+
+    std::string result;
+    while (value > 0) {
+        unsigned digit = static_cast<unsigned>(value % 10);
+        result.insert(result.begin(), static_cast<char>('0' + digit));
+        value /= 10;
+    }
+    return result;
+}
+
+// Overload operator<< for __uint128_t
+inline std::ostream& operator<<(std::ostream& os, __uint128_t value) {
+    std::string s = uint128_to_string(value);
+    os.write(s.data(), static_cast<std::streamsize>(s.size()));
+    return os;
+}
+
+// Optional: Overload for __int128_t (signed)
+inline std::ostream& operator<<(std::ostream& os, __int128_t value) {
+    if (value < 0) {
+        os.put('-');
+        value = -value;
+    }
+    return os << static_cast<__uint128_t>(value);
+}
+
 namespace primetools {
 
+template <typename T>
 const std::string
 TruncateNumber(
-    const mpz_class& Number,
+    const T& Number,
     const size_t StartDigits = 5,
     const size_t EndDigits = 3
-);
+)
+{
+    std::string str;
+    if constexpr (std::is_same_v<T, __uint128_t>) {
+        str = uint128_to_string(Number);
+    }
+    else {
+        str = Number.get_str();
+    }
+    if (str.length() <= StartDigits + EndDigits) {
+        return str;
+    }
+    return str.substr(0, StartDigits) + "..." + str.substr(str.length() - EndDigits);
+}
 
 const mpz_class
 divmod(
@@ -98,6 +142,26 @@ divides(
 static inline
 const bool
 divides(
+    const __uint128_t N,
+    const __uint128_t Value
+)
+{
+    return (N % Value) == 0;
+}
+
+static inline
+const bool
+divides(
+    const __uint128_t N,
+    const uint64_t Value
+)
+{
+    return (N % Value) == 0;
+}
+
+static inline
+const bool
+divides(
     const uint64_t N,
     const uint64_t Value
 )
@@ -121,6 +185,15 @@ increment(
 )
 {
     mpz_add_ui(Value.get_mpz_t(), Value.get_mpz_t(), Amount);
+}
+
+static inline void
+increment(
+    __uint128_t& Value,
+    const uint64_t Amount = 1
+)
+{
+    Value += Amount;
 }
 
 // Cover all basic types
@@ -181,6 +254,15 @@ modulo(
     return mpz_fdiv_ui(A.get_mpz_t(), M);
 }
 
+static inline __uint128_t
+modulo(
+    const __uint128_t& A,
+    const uint64_t M
+)
+{
+    return A % M;
+}
+
 static inline uint64_t
 modulo(
     uint64_t& A,
@@ -229,6 +311,26 @@ bit_size(
     return std::bit_width(Value);
 }
 
+static inline
+const bool
+fits_uint128(
+    const mpz_class& Value
+)
+{
+    return bit_size(Value) <= 128;
+}
+
+static inline __uint128_t
+mpz_to_uint128(
+    const mpz_class& Value
+)
+{
+    __uint128_t result = Value.get_ui();
+    __uint128_t high = mpz_class(Value >> 64).get_ui();
+    result |= (high << 64);
+    return result;
+}
+
 const bool
 is_numeric(
     const std::string_view Str
@@ -272,6 +374,24 @@ max(
 )
 {
     return (A > B) ? A : B;
+}
+
+static inline
+const uint64_t
+get_ui(
+    const mpz_class& Value
+)
+{
+    return Value.get_ui();
+}
+
+static inline
+const uint64_t
+get_ui(
+    const __uint128_t& Value
+)
+{
+    return static_cast<uint64_t>(Value);
 }
 
 } // namespace primetools
