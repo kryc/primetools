@@ -118,16 +118,22 @@ public:
         return *this;
     }
 
-    // Add a scalar uint64_t to lane 0 of all limbs with carry propagation
-    BigIntAVX& operator+=(uint64_t other) {
-        uint64_t carry = other;
-        for (size_t w = 0; w < NumWords && carry; ++w) {
-            alignas(64) uint32_t lane_vals[NumLanes];
-            _mm512_store_si512(reinterpret_cast<__m512i*>(lane_vals), limbs[w]);
-            uint64_t full = static_cast<uint64_t>(lane_vals[0]) + carry;
-            lane_vals[0] = static_cast<uint32_t>(full);
-            carry = full >> 32;
-            limbs[w] = _mm512_load_si512(reinterpret_cast<const __m512i*>(lane_vals));
+    // Add a scalar uint32_t to all lanes with carry propagation across 32-bit limbs.
+    BigIntAVX& operator+=(uint32_t other) {
+        const __m512i zero  = _mm512_setzero_si512();
+        __m512i carry       = _mm512_set1_epi32(static_cast<int32_t>(other)); // initial delta=other
+
+        for (size_t w = 0; w < NumWords; ++w) {
+            if (w != 0 && _mm512_test_epi32_mask(carry, carry) == 0) {
+                break; // no carry left to propagate
+            }
+
+            const __m512i limb = limbs[w];
+            const __m512i sum  = _mm512_add_epi32(limb, carry);
+            const __mmask16 carry_mask = _mm512_cmp_epu32_mask(sum, limb, _MM_CMPINT_LT);
+
+            limbs[w] = sum;
+            carry = _mm512_mask_set1_epi32(zero, carry_mask, 1); // next delta = carry (0/1)
         }
         return *this;
     }

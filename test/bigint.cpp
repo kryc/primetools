@@ -10,20 +10,20 @@ TEST(BigInt, Assign)
 {
     BigInt<1024> bigInt;
     bigInt = 4294967295; // 2^32 - 1
-    EXPECT_EQ(bigInt[0], 4294967295u);
-    EXPECT_EQ(bigInt[1], 0u);
+    EXPECT_EQ(bigInt[0], 4294967295ull);
+    EXPECT_EQ(bigInt[1], 0ull);
 
     mpz_class largeValue = (mpz_class(1) << 64) - 1; // 2^64 - 1
     bigInt = largeValue;
-    EXPECT_EQ(bigInt[0], 4294967295u);
-    EXPECT_EQ(bigInt[1], 4294967295u);
-    EXPECT_EQ(bigInt[2], 0u);
+    EXPECT_EQ(bigInt[0], 0xFFFFFFFFFFFFFFFFull);
+    EXPECT_EQ(bigInt[1], 0ull);
 
     mpz_random(largeValue.get_mpz_t(), 1024);
     bigInt = largeValue;
-    for (size_t i = 0; i < 32; ++i) {
-        EXPECT_EQ(bigInt[i], static_cast<uint32_t>(largeValue.get_ui() & 0xFFFFFFFFu));
-        largeValue >>= 32;
+    for (size_t i = 0; i < 16; ++i) {
+        uint64_t limb = static_cast<uint64_t>(largeValue.get_ui());
+        EXPECT_EQ(bigInt[i], limb);
+        largeValue >>= 64;
     }
 }
 
@@ -31,10 +31,50 @@ TEST(BigInt, AddEquals)
 {
     BigInt<1024> bigInt;
     bigInt += 1;
-    EXPECT_EQ(bigInt[0], 1u);
-    bigInt += 4294967295; // 2^32 - 1
+    EXPECT_EQ(bigInt[0], 1ull);
+    bigInt = 0;
+    EXPECT_EQ(bigInt[0], 0ull);
+    bigInt += 0xFFFFFFFFFFFFFFFFull; // 2^64 - 1
+    EXPECT_EQ(bigInt[0], 0xFFFFFFFFFFFFFFFFull);
+    bigInt += 1;
+    EXPECT_EQ(bigInt[0], 0ull);
+    EXPECT_EQ(bigInt[1], 1ull);
+    bigInt += 0xFFFFFFFFFFFFFFFFull; // 2^64 - 1
+    EXPECT_EQ(bigInt[0], 0xFFFFFFFFFFFFFFFFull);
+    EXPECT_EQ(bigInt[1], 1ull);
+    bigInt += 0xFFFFFFFFFFFFFFFFull; // 2^64 - 1
+    EXPECT_EQ(bigInt[0], 0xFFFFFFFFFFFFFFFEull);
+    EXPECT_EQ(bigInt[1], 2ull);
+    // Check overflow beyond 128 bits
+    bigInt = 0xFFFFFFFFFFFFFFFFull;
+    bigInt <<= 64;
+    bigInt += 0xFFFFFFFFFFFFFFFFull;
+    EXPECT_EQ(bigInt[0], 0xFFFFFFFFFFFFFFFFull);
+    EXPECT_EQ(bigInt[1], 0xFFFFFFFFFFFFFFFFull);
+    bigInt += 1;
     EXPECT_EQ(bigInt[0], 0u);
-    EXPECT_EQ(bigInt[1], 1u);
+    EXPECT_EQ(bigInt[1], 0u);
+    EXPECT_EQ(bigInt[2], 1u);
+}
+
+TEST(BigInt, SubtractEquals)
+{
+    BigInt<1024> bigInt;
+    bigInt = 100;
+    bigInt -= 50;
+    EXPECT_EQ(bigInt[0], 50ull);
+    bigInt -= 50;
+    EXPECT_EQ(bigInt[0], 0ull);
+
+    bigInt = 0;
+    bigInt -= 1;
+    EXPECT_EQ(bigInt[0], std::numeric_limits<uint64_t>::max());
+    EXPECT_EQ(bigInt[1], std::numeric_limits<uint64_t>::max());
+
+    bigInt = 0x100000000ull; // 2^32
+    bigInt -= 1;
+    EXPECT_EQ(bigInt[0], 0xFFFFFFFFull);
+    EXPECT_EQ(bigInt[1], 0u);
 }
 
 TEST(BigInt, Divides)
@@ -64,16 +104,19 @@ TEST(BigInt, RestoringDivides)
     bigInt2 = 25;
     EXPECT_TRUE(bigInt1.restoring_divides(bigInt2));
 
-    gmp_randstate_t rs; gmp_randinit_default(rs); gmp_randseed_ui(rs, 123u);
+    gmp_randstate_t rs;
+    gmp_randinit_default(rs); gmp_randseed_ui(rs, 123u);
     mpz_class a, b, mult;
-    mpz_urandomb(a.get_mpz_t(), rs, 512);
-    mpz_urandomb(b.get_mpz_t(), rs, 256);
-    mult = a * b;
-    bigInt1 = mult;
-    bigInt2 = a;
-    EXPECT_TRUE(bigInt1.restoring_divides(bigInt2));
-    bigInt2 += 1;
-    EXPECT_FALSE(bigInt1.restoring_divides(bigInt2));
+    for (size_t i = 0; i < 100; ++i) {
+        mpz_urandomb(a.get_mpz_t(), rs, 512);
+        mpz_urandomb(b.get_mpz_t(), rs, 256);
+        mult = a * b;
+        bigInt1 = mult;
+        bigInt2 = a;
+        EXPECT_TRUE(bigInt1.restoring_divides(bigInt2));
+        bigInt2 += 1;
+        EXPECT_FALSE(bigInt1.restoring_divides(bigInt2));
+    }
     gmp_randclear(rs);
 }
 
@@ -110,6 +153,50 @@ TEST(BigIntAVX, AssignMpz)
     for (uint32_t lane = 1; lane < 16; ++lane) {
         EXPECT_EQ(big.lane_word(lane, 0), 0u);
         EXPECT_EQ(big.lane_word(lane, 1), 0u);
+    }
+}
+
+TEST(BigIntAVX, AddEquals)
+{
+    BigIntAVX<1024> big;
+
+    // Initialize all lanes to zero
+    {
+        std::array<uint64_t, 16> vals = {0};
+        std::span<const uint64_t> s(vals.data(), vals.size());
+        big = s;
+    }
+
+    // Add 1 to all lanes
+    big += 1;
+
+    // Verify all lanes are now 1
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 1u);
+        EXPECT_EQ(big.lane_word(lane, 1), 0u);
+    }
+
+    // Add another 1
+    big += 1;
+    // Verify all lanes are now 2
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 2u);
+        EXPECT_EQ(big.lane_word(lane, 1), 0u);
+    }
+
+    big += 2;
+    // Verify all lanes are now 4
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 4u);
+        EXPECT_EQ(big.lane_word(lane, 1), 0u);
+    }
+
+    // Overflow the low limb in all lanes
+    big += 0xFFFFFFFCull;
+    // Verify all lanes are now 0 (with carry to next limb)
+    for (uint32_t lane = 0; lane < 16; ++lane) {
+        EXPECT_EQ(big.lane_word(lane, 0), 0u);
+        EXPECT_EQ(big.lane_word(lane, 1), 1u);
     }
 }
 
