@@ -213,6 +213,23 @@ public:
         return result;
     }
 
+    template <typename T>
+    T to() const {
+        if constexpr (std::is_same_v<T, mpz_class>) {
+            return to_mpz();
+        } else if constexpr (std::is_same_v<T, uint64_t>) {
+            return data[0];
+        } else if constexpr (std::is_same_v<T, __uint128_t>) {
+            __uint128_t result = data[0];
+            if (NumWords > 1) {
+                result |= static_cast<__uint128_t>(data[1]) << 64;
+            }
+            return result;
+        } else {
+            static_assert(sizeof(T) <= 16, "Conversion to type T not supported");
+        }
+    }
+
     // Check zero
     bool zero() const {
         for (size_t i = 0; i < NumWords; ++i) {

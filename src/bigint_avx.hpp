@@ -47,6 +47,31 @@ public:
         return result;
     }
 
+    template <typename T>
+    T to(const size_t lane) const {
+        if constexpr (std::is_same_v<T, mpz_class>) {
+            return to_mpz(lane);
+        } else if constexpr (std::is_same_v<T, uint64_t>) {
+            uint64_t result = 0;
+            for (size_t w = 0; w < NumWords && w < 2; ++w) {
+                alignas(64) uint32_t lane_vals[NumLanes];
+                _mm512_store_si512(reinterpret_cast<__m512i*>(lane_vals), limbs[w]);
+                result |= static_cast<uint64_t>(lane_vals[lane]) << (32 * w);
+            }
+            return result;
+        } else if constexpr (std::is_same_v<T, __uint128_t>) {
+            __uint128_t result = 0;
+            for (size_t w = 0; w < NumWords && w < 4; ++w) {
+                alignas(64) uint32_t lane_vals[NumLanes];
+                _mm512_store_si512(reinterpret_cast<__m512i*>(lane_vals), limbs[w]);
+                result |= static_cast<__uint128_t>(lane_vals[lane]) << (32 * w);
+            }
+            return result;
+        } else {
+            static_assert(sizeof(T) <= 16, "Conversion to type T not supported");
+        }
+    }
+
     // Access specific lane and limb (word index)
     uint32_t lane_word(size_t lane, size_t word) const {
         alignas(64) uint32_t tmp[NumLanes];
@@ -86,6 +111,24 @@ public:
             mpz_class temp = vals[lane];
             for (size_t w = 0; w < NumWords; ++w) {
                 uint32_t limb = static_cast<uint32_t>(temp.get_ui());
+                alignas(64) uint32_t lane_vals[NumLanes];
+                _mm512_store_si512(reinterpret_cast<__m512i*>(lane_vals), limbs[w]);
+                lane_vals[lane] = limb;
+                limbs[w] = _mm512_load_si512(reinterpret_cast<const __m512i*>(lane_vals));
+                temp >>= 32;
+            }
+        }
+        return *this;
+    }
+    BigIntAVX& operator=(const std::span<const __uint128_t> vals) {
+        for (size_t w = 0; w < NumWords; ++w) {
+            limbs[w] = _mm512_setzero_si512();
+        }
+        size_t lanes_to_fill = std::min(vals.size(), static_cast<size_t>(NumLanes));
+        for (size_t lane = 0; lane < lanes_to_fill; ++lane) {
+            __uint128_t temp = vals[lane];
+            for (size_t w = 0; w < NumWords; ++w) {
+                uint32_t limb = static_cast<uint32_t>(temp & 0xFFFFFFFFull);
                 alignas(64) uint32_t lane_vals[NumLanes];
                 _mm512_store_si512(reinterpret_cast<__m512i*>(lane_vals), limbs[w]);
                 lane_vals[lane] = limb;
@@ -246,66 +289,111 @@ public:
         return 0;
     }
 
-    bool restoring_divides(const BigIntAVX& dividend) const {
+    template <typename T>
+    const bool restoring_divides(const T& Dividend) const {
+        constexpr size_t DividendMaxBits  = 8192;
+        constexpr size_t DividendMaxWords = DividendMaxBits / 32;
+
         BigIntAVX<Bits> remainder; // starts at 0
         const __m512i zero = _mm512_setzero_si512();
 
-        // Fast path: if any lane of the divisor (this) is zero, treat as not dividing
-        __mmask16 any_divisor_nonzero = 0;
-        for (size_t j = 0; j < NumWords; ++j) {
-            any_divisor_nonzero |= _mm512_cmp_epi32_mask(limbs[j], zero, _MM_CMPINT_NE);
+        // Break the dividend into an array of simd u32 limbs (LSW first).
+        size_t dividend_bits = primetools::bit_size(Dividend);
+        size_t dividend_words = (dividend_bits + 31) / 32;
+
+        std::array<uint32_t, DividendMaxWords> dividend_limbs{};
+        std::array<__m512i, DividendMaxWords> dividend_limbs_vec{};
+        
+        if constexpr (std::is_same_v<T, mpz_class>) {
+            size_t count = 0;
+            mpz_export(dividend_limbs.data(), &count, -1, sizeof(uint32_t), 0, 0, Dividend.get_mpz_t());
+            if (count != dividend_words) {
+                throw std::runtime_error("mpz_export count does not match expected dividend words");
+            }
+        } else {
+            for (size_t w = 0; w < dividend_words; ++w) {
+                dividend_limbs[w] = static_cast<uint32_t>((Dividend >> (32 * w)) & 0xFFFFFFFFull);
+            }
         }
-        if (any_divisor_nonzero != 0xFFFF) {
+        
+        // Load dividend limbs into __m512i vectors
+        for (size_t w = 0; w < dividend_words; ++w) {
+            dividend_limbs_vec[w] = _mm512_set1_epi32(dividend_limbs[w]);
+        }
+
+        // Reject the case where all lanes of the divisor are zero.
+        __mmask16 non_zero_mask = 0;
+        for (size_t j = 0; j < NumWords; ++j) {
+            non_zero_mask |= _mm512_cmp_epi32_mask(limbs[j], zero, _MM_CMPINT_NE);
+        }
+        if (non_zero_mask == 0) {
             return false;
         }
 
-        // Restoring division: this (divisor) divides dividend?
-        for (size_t bit = dividend.max_bitlength(); bit-- > 0;) {
-            // remainder <<= 1; remainder += current bit of dividend (per lane)
+        // Restoring division: does this divisor divide dividend in any lane?
+        for (size_t bit = dividend_bits; bit-- > 0;) {
+            // remainder <<= 1
             remainder <<= 1;
 
-            {
-                const uint32_t bit_in_limb = static_cast<uint32_t>(bit & 31u);
-                __m512i shifted = _mm512_srli_epi32(dividend.limbs[0], bit_in_limb);
-                __m512i ones    = _mm512_set1_epi32(1);
-                __m512i masked  = _mm512_and_si512(shifted, ones);
-                __mmask16 add_mask = _mm512_cmp_epu32_mask(masked, _mm512_setzero_si512(), _MM_CMPINT_NE);
-                remainder.limbs[0] = _mm512_mask_add_epi32(remainder.limbs[0], add_mask,
-                                                           remainder.limbs[0], ones);
+            // remainder += current bit of dividend (same bit for all lanes),
+            // with proper multi-limb carry propagation.
+            const size_t   word_idx    = bit / 32;
+            const uint32_t bit_in_word = static_cast<uint32_t>(bit % 32);
+
+            __m512i word_vec  = dividend_limbs_vec[word_idx];
+            __m512i shifted   = _mm512_srli_epi32(word_vec, bit_in_word);
+            __m512i ones      = _mm512_set1_epi32(1);
+            __m512i masked    = _mm512_and_si512(shifted, ones);
+            __mmask16 add_mask = _mm512_cmp_epu32_mask(masked, zero, _MM_CMPINT_NE);
+
+            // Propagate a +1 across limbs where the bit is set.
+            __m512i carry_vec = _mm512_mask_set1_epi32(zero, add_mask, 1);
+            for (size_t j = 0; j < NumWords; ++j) {
+                if (j > 0) {
+                    // Stop if there is no carry left in any lane.
+                    if (_mm512_test_epi32_mask(carry_vec, carry_vec) == 0) break;
+                }
+                __m512i limb = remainder.limbs[j];
+                __m512i sum  = _mm512_add_epi32(limb, carry_vec);
+                // Unsigned carry detection: sum < limb
+                __mmask16 new_carry_mask = _mm512_cmp_epu32_mask(sum, limb, _MM_CMPINT_LT);
+                remainder.limbs[j] = sum;
+                carry_vec = _mm512_mask_set1_epi32(zero, new_carry_mask, 1);
             }
 
-            // if remainder >= divisor then remainder -= divisor
+            // if remainder >= divisor then remainder -= divisor (per lane)
             __mmask16 lt_mask_all = 0;
             __mmask16 gt_mask_all = 0;
-            __mmask16 undecided   = 0xFFFF;
+            __mmask16 undecided   = non_zero_mask;
             for (size_t j = NumWords; j-- > 0;) {
                 const __m512i r = remainder.limbs[j];
                 const __m512i d = limbs[j];
-                const __mmask16 lt_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_LT) & undecided;
-                const __mmask16 gt_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_GT) & undecided;
+                const __mmask16 lt_mask = _mm512_cmp_epu32_mask(r, d, _MM_CMPINT_LT) & undecided;
+                const __mmask16 gt_mask = _mm512_cmp_epu32_mask(r, d, _MM_CMPINT_GT) & undecided;
                 lt_mask_all |= lt_mask;
                 gt_mask_all |= gt_mask;
                 undecided   &= ~(lt_mask | gt_mask);
             }
-            // lanes with remainder >= divisor: not (remainder < divisor)
             (void)gt_mask_all; // suppress unused warning
-            const __mmask16 ge_mask = ~lt_mask_all;
+
+            __mmask16 ge_mask = non_zero_mask & ~lt_mask_all; // lanes where remainder >= divisor
 
             // Subtract divisor from remainder on those lanes, propagating borrow across limbs.
             __mmask16 borrow_mask = 0;
             for (size_t j = 0; j < NumWords; ++j) {
                 const __m512i r = remainder.limbs[j];
                 const __m512i d = limbs[j];
-                __m512i diff = _mm512_sub_epi32(r, d);
-                // Detect per-lane borrow: r < d
-                const __mmask16 this_borrow = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_LT);
+                __m512i diff    = _mm512_sub_epi32(r, d);
+
+                // Detect per-lane borrow: r < d (unsigned)
+                const __mmask16 this_borrow = _mm512_cmp_epu32_mask(r, d, _MM_CMPINT_LT);
 
                 // Apply existing borrow into r: if borrow_mask set, subtract 1
                 const __m512i borrow_vec = _mm512_mask_set1_epi32(zero, borrow_mask, 1);
                 diff = _mm512_sub_epi32(diff, borrow_vec);
 
                 // New borrow is: (r < d) OR (r == d AND borrow_in)
-                const __mmask16 eq_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_EQ);
+                const __mmask16 eq_mask    = _mm512_cmp_epu32_mask(r, d, _MM_CMPINT_EQ);
                 const __mmask16 new_borrow = this_borrow | (eq_mask & borrow_mask);
 
                 // Keep diff only on lanes where we actually subtract (ge_mask)
@@ -314,13 +402,21 @@ public:
                 borrow_mask = new_borrow & ge_mask;
             }
         }
+
         // Compare all lanes with zero across all limbs.
         uint16_t zero_mask = 0xFFFF;
         for (size_t j = 0; j < NumWords; ++j) {
             __mmask16 cmp = _mm512_cmpeq_epi32_mask(remainder.limbs[j], zero);
             zero_mask &= static_cast<uint16_t>(cmp);
         }
-        return zero_mask != 0x0000;
+
+        // We consider division successful if any lane with a non-zero divisor has zero remainder.
+        return (zero_mask & non_zero_mask) != 0;
+    }
+
+    template <typename T>
+    const bool divides(const T& Dividend) const {
+        return restoring_divides(Dividend);
     }
 };
 

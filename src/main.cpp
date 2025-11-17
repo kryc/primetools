@@ -249,12 +249,12 @@ int main(
         const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
         const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(flags["blocksize"]) : 0;
 
-        if (simd) {
+        /*if (simd) {
             const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
             auto result = primetools::TrialDivisionSimd(n, max_iterations);
             OutputFactors(result);
         }
-        else if (threads == 0 || threads > 1) {
+        else */if (threads == 0 || threads > 1) {
             if (primetools::fits_uint128(n)) {
                 auto result = primetools::TrialDivisionMT<__uint128_t>(primetools::mpz_to_uint128(n), threads, blocksize, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), modulus);
                 OutputFactors(result);
@@ -267,20 +267,20 @@ int main(
         }
         else {
             if (n.fits_ulong_p()) {
-                auto result = primetools::TrialDivision<uint64_t>(n.get_ui(), modulus, !noguess, bits, start.get_ui(), end.get_ui());
+                auto result = primetools::TrialDivision<uint64_t>(n.get_ui(), modulus, !noguess, bits, start.get_ui(), end.get_ui(), simd);
                 OutputFactors(result);
             }
             // Check if it fits a __uint128t
             else if( primetools::fits_uint128(n) )
             {
                 __uint128_t n128 = primetools::mpz_to_uint128(n);
-                auto result = primetools::TrialDivision<__uint128_t>(n128, modulus, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end));
+                auto result = primetools::TrialDivision<__uint128_t>(n128, modulus, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), simd);
                 OutputFactors(result);
             
             }
             else
             {
-                auto result = primetools::TrialDivision<mpz_class>(n, modulus, !noguess, bits, start, end);
+                auto result = primetools::TrialDivision<mpz_class>(n, modulus, !noguess, bits, start, end, simd);
                 OutputFactors(result);
             }  
         }

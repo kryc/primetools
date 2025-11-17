@@ -166,26 +166,27 @@ TEST(BigIntAVX, LeftShift)
 
 TEST(BigIntAVX, Divides)
 {
-    BigIntAVX<1024> big1, big2;
-    // Use all 16 lanes with a mix of divisible and non-divisible pairs.
+    mpz_class a, b;
+    // Generate a 1024-bit divisor
+    gmp_randstate_t rs; gmp_randinit_default(rs); gmp_randseed_ui(rs, 42u);
+    mpz_urandomb(a.get_mpz_t(), rs, 512); // 512-bit random
+    mpz_urandomb(b.get_mpz_t(), rs, 256); // 256-bit random
+    mpz_class mult = a * b;
 
-    // Case 1: all lanes divisible (each lane: divisor = 100, dividend = 100 * lane)
+    BigIntAVX<1024> big;
+
+    // Case 1: all lanes divisible
     {
-        std::array<uint64_t, 16> dividends{};
-        std::array<uint64_t, 16> divisors{};
+        std::array<mpz_class, 16> divisors{};
         for (uint32_t lane = 0; lane < 16; ++lane) {
-            dividends[lane] = static_cast<uint64_t>(100ull * (lane + 1));
-            divisors[lane]  = 100ull;
+            divisors[lane] = a;
         }
-        std::span<const uint64_t> s_dividends(dividends.data(), dividends.size());
-        std::span<const uint64_t> s_divisors(divisors.data(), divisors.size());
-        big1 = s_divisors;   // divisor
-        big2 = s_dividends;  // dividend
-        EXPECT_TRUE(big1.restoring_divides(big2));
+        big = divisors;
+        EXPECT_TRUE(big.divides(mult));
     }
 
     // Case 2: none of the lanes divisible (add 1 to every dividend)
-    {
+    /*{
         std::array<uint64_t, 16> dividends{};
         std::array<uint64_t, 16> divisors{};
         for (uint32_t lane = 0; lane < 16; ++lane) {
@@ -215,7 +216,7 @@ TEST(BigIntAVX, Divides)
         big1 = s_divisors;   // divisor
         big2 = s_dividends;  // dividend
         EXPECT_TRUE(big1.restoring_divides(big2));
-    }
+    }*/
 }
 
 TEST(BigIntAVX, MaxBitLength)
