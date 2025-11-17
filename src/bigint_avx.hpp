@@ -247,72 +247,68 @@ public:
     }
 
     bool restoring_divides(const BigIntAVX& divisor) const {
-        std::array<__m512i, NumWords> remainder{};
+        BigIntAVX<Bits> remainder; // starts at 0
         const __m512i zero = _mm512_setzero_si512();
-        const __m512i one  = _mm512_set1_epi32(1);
 
         // Fast path: if any lane of the divisor is zero, treat as not divisible
-        // (mirrors scalar BigInt::restoring_divides behaviour on zero divisor).
         __mmask16 any_divisor_nonzero = 0;
         for (size_t j = 0; j < NumWords; ++j) {
             any_divisor_nonzero |= _mm512_cmp_epi32_mask(divisor.limbs[j], zero, _MM_CMPINT_NE);
         }
-        // If any lane has divisor == 0, bail out.
         if (any_divisor_nonzero != 0xFFFF) {
             return false;
         }
 
         for (size_t bit = max_bitlength(); bit-- > 0;) {
-            // Shift remainder left by 1 across all lanes
-            for (size_t j = NumWords - 1; j > 0; --j) {
-                remainder[j] = _mm512_or_si512(_mm512_slli_epi32(remainder[j], 1),
-                                              _mm512_srli_epi32(remainder[j - 1], 31));
+            // remainder <<= 1; remainder += current bit of dividend (per lane)
+            remainder <<= 1;
 
+            {
+                const uint32_t bit_in_limb = static_cast<uint32_t>(bit & 31u);
+                __m512i shifted = _mm512_srli_epi32(limbs[0], bit_in_limb);
+                __m512i ones    = _mm512_set1_epi32(1);
+                __m512i masked  = _mm512_and_si512(shifted, ones);
+                __mmask16 add_mask = _mm512_cmp_epu32_mask(masked, _mm512_setzero_si512(), _MM_CMPINT_NE);
+                remainder.limbs[0] = _mm512_mask_add_epi32(remainder.limbs[0], add_mask,
+                                                           remainder.limbs[0], ones);
             }
-            remainder[0] = _mm512_or_si512(_mm512_slli_epi32(remainder[0], 1),
-                                          _mm512_and_si512(_mm512_srli_epi32(limbs[0], bit % 32),
-                                                           _mm512_set1_epi32(1)));
 
             // if remainder >= divisor then remainder -= divisor
-            // Robust multi-limb comparison per lane using an "undecided" mask.
-            __mmask16 lt_mask_all = 0;      // lanes where remainder < divisor
-            __mmask16 gt_mask_all = 0;      // lanes where remainder > divisor (kept for clarity/debug, not used)
-            __mmask16 undecided   = 0xFFFF; // lanes still equal so far
+            __mmask16 lt_mask_all = 0;
+            __mmask16 gt_mask_all = 0;
+            __mmask16 undecided   = 0xFFFF;
             for (size_t j = NumWords; j-- > 0;) {
-                __m512i r = remainder[j];
-                __m512i d = divisor.limbs[j];
-                __mmask16 lt_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_LT) & undecided;
-                __mmask16 gt_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_GT) & undecided;
-
+                const __m512i r = remainder.limbs[j];
+                const __m512i d = divisor.limbs[j];
+                const __mmask16 lt_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_LT) & undecided;
+                const __mmask16 gt_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_GT) & undecided;
                 lt_mask_all |= lt_mask;
                 gt_mask_all |= gt_mask;
                 undecided   &= ~(lt_mask | gt_mask);
             }
             // lanes with remainder >= divisor: not (remainder < divisor)
             (void)gt_mask_all; // suppress unused warning
-            __mmask16 ge_mask = ~lt_mask_all;
+            const __mmask16 ge_mask = ~lt_mask_all;
 
             // Subtract divisor from remainder on those lanes, propagating borrow across limbs.
             __mmask16 borrow_mask = 0;
             for (size_t j = 0; j < NumWords; ++j) {
-                __m512i r = remainder[j];
-                __m512i d = divisor.limbs[j];
-
-                // r - d
+                const __m512i r = remainder.limbs[j];
+                const __m512i d = divisor.limbs[j];
                 __m512i diff = _mm512_sub_epi32(r, d);
                 // Detect per-lane borrow: r < d
-                __mmask16 this_borrow = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_LT);
+                const __mmask16 this_borrow = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_LT);
 
                 // Apply existing borrow into r: if borrow_mask set, subtract 1
-                __m512i borrow_vec = _mm512_mask_blend_epi32(borrow_mask, zero, one);
+                const __m512i borrow_vec = _mm512_mask_set1_epi32(zero, borrow_mask, 1);
                 diff = _mm512_sub_epi32(diff, borrow_vec);
 
                 // New borrow is: (r < d) OR (r == d AND borrow_in)
-                __mmask16 eq_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_EQ);
-                __mmask16 new_borrow = this_borrow | (eq_mask & borrow_mask);
+                const __mmask16 eq_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_EQ);
+                const __mmask16 new_borrow = this_borrow | (eq_mask & borrow_mask);
 
                 // Keep diff only on lanes where we actually subtract (ge_mask)
-                remainder[j] = _mm512_mask_mov_epi32(r, ge_mask, diff);
+                remainder.limbs[j] = _mm512_mask_mov_epi32(r, ge_mask, diff);
 
                 borrow_mask = new_borrow & ge_mask;
             }
@@ -320,11 +316,9 @@ public:
         // Compare all lanes with zero across all limbs.
         uint16_t zero_mask = 0xFFFF;
         for (size_t j = 0; j < NumWords; ++j) {
-            __mmask16 cmp = _mm512_cmpeq_epi32_mask(remainder[j], zero);
-            // Keep only lanes that are still zero across all limbs.
+            __mmask16 cmp = _mm512_cmpeq_epi32_mask(remainder.limbs[j], zero);
             zero_mask &= static_cast<uint16_t>(cmp);
         }
-        // Any lane divisible iff at least one lane's remainder is zero.
         return zero_mask != 0x0000;
     }
 };
