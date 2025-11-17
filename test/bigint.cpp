@@ -80,8 +80,8 @@ TEST(BigInt, SubtractEquals)
 TEST(BigInt, Divides)
 {
     BigInt<1024> bigInt1, bigInt2;
-    bigInt1 = 100;
-    bigInt2 = 25;
+    bigInt1 = 25;  // divisor
+    bigInt2 = 100; // dividend
     EXPECT_TRUE(bigInt1.divides(bigInt2));
     mpz_class a, b, mult;
     // Use proper bit-size random generation (previously mpz_random used limb count, producing oversized values)
@@ -89,8 +89,8 @@ TEST(BigInt, Divides)
     mpz_urandomb(a.get_mpz_t(), rs, 512); // 512-bit random
     mpz_urandomb(b.get_mpz_t(), rs, 256); // 256-bit random
     mult = a * b;
-    bigInt1 = mult;
-    bigInt2 = a;
+    bigInt1 = a;    // divisor
+    bigInt2 = mult; // dividend
     EXPECT_TRUE(bigInt1.divides(bigInt2));
     bigInt2 += 1;
     EXPECT_FALSE(bigInt1.divides(bigInt2));
@@ -100,8 +100,8 @@ TEST(BigInt, Divides)
 TEST(BigInt, RestoringDivides)
 {
     BigInt<1024> bigInt1, bigInt2;
-    bigInt1 = 100;
-    bigInt2 = 25;
+    bigInt1 = 25;  // divisor
+    bigInt2 = 100; // dividend
     EXPECT_TRUE(bigInt1.restoring_divides(bigInt2));
 
     gmp_randstate_t rs;
@@ -111,8 +111,8 @@ TEST(BigInt, RestoringDivides)
         mpz_urandomb(a.get_mpz_t(), rs, 512);
         mpz_urandomb(b.get_mpz_t(), rs, 256);
         mult = a * b;
-        bigInt1 = mult;
-        bigInt2 = a;
+        bigInt1 = a;    // divisor
+        bigInt2 = mult; // dividend
         EXPECT_TRUE(bigInt1.restoring_divides(bigInt2));
         bigInt2 += 1;
         EXPECT_FALSE(bigInt1.restoring_divides(bigInt2));

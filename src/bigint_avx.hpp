@@ -246,26 +246,27 @@ public:
         return 0;
     }
 
-    bool restoring_divides(const BigIntAVX& divisor) const {
+    bool restoring_divides(const BigIntAVX& dividend) const {
         BigIntAVX<Bits> remainder; // starts at 0
         const __m512i zero = _mm512_setzero_si512();
 
-        // Fast path: if any lane of the divisor is zero, treat as not divisible
+        // Fast path: if any lane of the divisor (this) is zero, treat as not dividing
         __mmask16 any_divisor_nonzero = 0;
         for (size_t j = 0; j < NumWords; ++j) {
-            any_divisor_nonzero |= _mm512_cmp_epi32_mask(divisor.limbs[j], zero, _MM_CMPINT_NE);
+            any_divisor_nonzero |= _mm512_cmp_epi32_mask(limbs[j], zero, _MM_CMPINT_NE);
         }
         if (any_divisor_nonzero != 0xFFFF) {
             return false;
         }
 
-        for (size_t bit = max_bitlength(); bit-- > 0;) {
+        // Restoring division: this (divisor) divides dividend?
+        for (size_t bit = dividend.max_bitlength(); bit-- > 0;) {
             // remainder <<= 1; remainder += current bit of dividend (per lane)
             remainder <<= 1;
 
             {
                 const uint32_t bit_in_limb = static_cast<uint32_t>(bit & 31u);
-                __m512i shifted = _mm512_srli_epi32(limbs[0], bit_in_limb);
+                __m512i shifted = _mm512_srli_epi32(dividend.limbs[0], bit_in_limb);
                 __m512i ones    = _mm512_set1_epi32(1);
                 __m512i masked  = _mm512_and_si512(shifted, ones);
                 __mmask16 add_mask = _mm512_cmp_epu32_mask(masked, _mm512_setzero_si512(), _MM_CMPINT_NE);
@@ -279,7 +280,7 @@ public:
             __mmask16 undecided   = 0xFFFF;
             for (size_t j = NumWords; j-- > 0;) {
                 const __m512i r = remainder.limbs[j];
-                const __m512i d = divisor.limbs[j];
+                const __m512i d = limbs[j];
                 const __mmask16 lt_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_LT) & undecided;
                 const __mmask16 gt_mask = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_GT) & undecided;
                 lt_mask_all |= lt_mask;
@@ -294,7 +295,7 @@ public:
             __mmask16 borrow_mask = 0;
             for (size_t j = 0; j < NumWords; ++j) {
                 const __m512i r = remainder.limbs[j];
-                const __m512i d = divisor.limbs[j];
+                const __m512i d = limbs[j];
                 __m512i diff = _mm512_sub_epi32(r, d);
                 // Detect per-lane borrow: r < d
                 const __mmask16 this_borrow = _mm512_cmp_epi32_mask(r, d, _MM_CMPINT_LT);

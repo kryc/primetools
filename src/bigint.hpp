@@ -224,59 +224,63 @@ public:
     }
 
     // restoring_divides
-    // Check if this BigInt is evenly divisible by `divisor` using restoring division.
-    bool restoring_divides(const BigInt& divisor) const {
-        if (divisor.zero()) return false;
-        if (this->zero()) return true; // 0 divisible by any non-zero divisor
+    // Check if this BigInt (the divisor) evenly divides `dividend` using restoring division.
+    bool restoring_divides(const BigInt& dividend) const {
+        // A zero divisor does not divide any value.
+        if (this->zero()) return false;
+        // Zero dividend is divisible by any non-zero divisor.
+        if (dividend.zero()) return true;
 
         BigInt<Bits> remainder; // starts at 0
-        for (size_t bit = bit_length(); bit-- > 0;) {
+        for (size_t bit = dividend.bit_length(); bit-- > 0;) {
             // remainder <<= 1; remainder += current bit of dividend
             remainder <<= 1;
-            remainder += (data[bit / 64] >> (bit % 64)) & 1u;
+            remainder += (dividend.data[bit / 64] >> (bit % 64)) & 1u;
 
-            // if remainder >= divisor then remainder -= divisor
+            // if remainder >= *this (divisor) then remainder -= *this
             int cmp = 0;
             for (size_t j = NumWords; j-- > 0;) {
                 uint64_t r = remainder[j];
-                uint64_t d = divisor[j];
+                uint64_t d = data[j];
                 if (r < d) { cmp = -1; break; }
                 if (r > d) { cmp = 1; break; }
             }
             if (cmp >= 0) {
-                remainder -= divisor;
+                remainder -= *this;
             }
         }
         return remainder.zero();
     }
 
     // divides
-    // Check if this BigInt is evenly divisible by `divisor` using Knuth's Algorithm D (multi-limb division).
-    bool divides(const BigInt& divisor) const {
-        if (divisor.zero()) return false;
-        if (this->zero()) return true;
+    // Check if this BigInt (the divisor) evenly divides `dividend` using Knuth's Algorithm D (multi-limb division).
+    bool divides(const BigInt& dividend) const {
+        // A zero divisor does not divide any value.
+        if (this->zero()) return false;
+        // Zero dividend is divisible by any non-zero divisor.
+        if (dividend.zero()) return true;
 
-        size_t n = divisor.limbs();
-        size_t u_len = this->limbs();
+        size_t n = this->limbs();       // divisor length
+        size_t u_len = dividend.limbs(); // dividend length
         size_t m = u_len - n;
 
         if (n == 1) {
-            uint64_t d = divisor.data[0];
+            uint64_t d = data[0];
             if (d == 0) return false;
 
             __uint128_t rem = 0;
             for (size_t idx = u_len; idx-- > 0;) {
-                rem = (rem << 64) | data[idx];
+                rem = (rem << 64) | dividend.data[idx];
                 rem %= d;
             }
             return rem == 0;
         }
 
         // Copy limbs into vectors u (size m+n+1) and v (size n)
-        std::array<uint64_t, Bits / 64 * 2 + 2> u = {0};
-        std::array<uint64_t, Bits / 64 + 1> v = {0};
-        std::copy(data.begin(), data.begin() + u_len, u.data());
-        std::copy(divisor.data.begin(), divisor.data.begin() + n, v.data());
+        std::array<uint64_t, Bits / 64 * 2 + 2> u = {0}; // dividend
+        std::array<uint64_t, Bits / 64 + 1> v = {0};     // divisor
+        std::copy(dividend.data.begin(), dividend.data.begin() + u_len, u.data());
+        std::copy(data.begin(), data.begin() + n, v.data());
 
         // Normalize: left-shift so that top limb of v has high bit set
         uint64_t vn1 = v[n - 1];

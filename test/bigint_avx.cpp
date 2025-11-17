@@ -169,7 +169,7 @@ TEST(BigIntAVX, Divides)
     BigIntAVX<1024> big1, big2;
     // Use all 16 lanes with a mix of divisible and non-divisible pairs.
 
-    // Case 1: all lanes divisible (each lane: dividend = 100 * lane, divisor = 100)
+    // Case 1: all lanes divisible (each lane: divisor = 100, dividend = 100 * lane)
     {
         std::array<uint64_t, 16> dividends{};
         std::array<uint64_t, 16> divisors{};
@@ -179,8 +179,8 @@ TEST(BigIntAVX, Divides)
         }
         std::span<const uint64_t> s_dividends(dividends.data(), dividends.size());
         std::span<const uint64_t> s_divisors(divisors.data(), divisors.size());
-        big1 = s_dividends;
-        big2 = s_divisors;
+        big1 = s_divisors;   // divisor
+        big2 = s_dividends;  // dividend
         EXPECT_TRUE(big1.restoring_divides(big2));
     }
 
@@ -194,8 +194,8 @@ TEST(BigIntAVX, Divides)
         }
         std::span<const uint64_t> s_dividends(dividends.data(), dividends.size());
         std::span<const uint64_t> s_divisors(divisors.data(), divisors.size());
-        big1 = s_dividends;
-        big2 = s_divisors;
+        big1 = s_divisors;   // divisor
+        big2 = s_dividends;  // dividend
         EXPECT_FALSE(big1.restoring_divides(big2));
     }
 
@@ -212,8 +212,8 @@ TEST(BigIntAVX, Divides)
         }
         std::span<const uint64_t> s_dividends(dividends.data(), dividends.size());
         std::span<const uint64_t> s_divisors(divisors.data(), divisors.size());
-        big1 = s_dividends;
-        big2 = s_divisors;
+        big1 = s_divisors;   // divisor
+        big2 = s_dividends;  // dividend
         EXPECT_TRUE(big1.restoring_divides(big2));
     }
 }
