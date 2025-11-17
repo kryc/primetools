@@ -58,6 +58,33 @@ GetUpperAndLowerBounds(
     return std::make_tuple(lower_bound, upper_bound, bits);
 }
 
+template <typename T>
+static inline const std::optional<std::pair<T, T>>
+AlignCandidateToModulus(
+    const T& N,
+    T& Candidate,
+    const size_t Modulus,
+    const bool StepBack = false
+)
+{
+    // Ensure candidate is odd
+    if ((Candidate & 1) == 0) {
+        Candidate += 1;
+    }
+
+    // Align candidate to be congruent to 1 modulo Modulus
+    while (primetools::modulo(Candidate, Modulus) != 1 && Candidate > 1) {
+        // Check if we found a factor
+        if (primetools::divides(N, Candidate) && Candidate > 1) {
+            return std::make_pair(Candidate, N / Candidate);
+        }
+        Candidate += StepBack ? -2 : 2;
+    }
+
+    return std::nullopt;
+}
+
+
 template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed>
 static const std::optional<std::pair<T, T>>
 TrialDivisionRange(
@@ -70,23 +97,13 @@ TrialDivisionRange(
     constexpr size_t WordBits = sizeof(AT) * 8;
     constexpr size_t GapsPerWord =  Packed == FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
     constexpr uint64_t GapsMask = Packed == FastPack ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
-    // const size_t ArraySize = constexpr Count == std::dynamic_extent ? GapArray.size() : Count;
 
     T candidate = StartValue;
 
-    // Cycle forwards until the candidate is congruent to 1 modulo the specified Modulus
-    // First, ensure the candidate is odd
-    if ((candidate & 1) == 0) {
-        candidate += 1;
-    }
-
-    // Then scan forwards until candidate % Modulus == 1
-    while (primetools::modulo(candidate, Modulus) != 1 && candidate > 1) {
-        // Check if we found a factor
-        if (primetools::divides(N, candidate) && candidate > 1) {
-            return std::make_pair(candidate, N / candidate);
-        }
-        candidate += 2;
+    // Align the candidate to 1 modulo Modulus
+    auto align_result = AlignCandidateToModulus<T>(N, candidate, Modulus, true);
+    if (align_result.has_value()) {
+        return align_result;
     }
 
     // Special case for wheel as we can use an optimization to rotate
