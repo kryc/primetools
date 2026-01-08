@@ -159,6 +159,7 @@ TrialDivisionRangeSimd(
     const std::span<const AT, Count> GapArray
 )
 {
+#if defined(__AVX512F__)
     constexpr size_t WordBits = sizeof(AT) * 8;
     constexpr size_t GapsPerWord =  Packed == FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
     constexpr uint64_t GapsMask = Packed == FastPack ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
@@ -218,7 +219,7 @@ TrialDivisionRangeSimd(
             big_candidates += Modulus * 16;
         }
     }
-
+#endif // __AVX512F__
     return std::nullopt;
 }
 

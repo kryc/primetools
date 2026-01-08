@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <span>
 
+#if defined(__AVX512F__)
+
 #include <immintrin.h>
 
 // BigIntAVX represents a batch of 16 independent big integers of size Bits,
@@ -419,5 +421,7 @@ public:
         return restoring_divides(Dividend);
     }
 };
+
+#endif // __AVX512F__
 
 #endif // BIGINT_AVX_HPP

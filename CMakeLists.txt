@@ -9,7 +9,7 @@ include(FetchContent)
 FetchContent_Declare(
   googletest
   # Specify the commit you depend on and update it regularly.
-  URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
+  URL https://github.com/google/googletest/releases/download/v1.17.0/googletest-1.17.0.tar.gz
 )
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
@@ -26,8 +26,8 @@ if(!APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions")
 endif()
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -funroll-loops -ffast-math -fomit-frame-pointer -fno-rtti -mavx512f -mavx512dq")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -O0 -mavx512f -mavx512dq")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -funroll-loops -ffast-math -fomit-frame-pointer -fno-rtti")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -O0")
 set(CMAKE_EXE_LINKER_FLAGS "-Wc23-extensions")
 if(APPLE)
     execute_process(COMMAND brew --prefix OUTPUT_VARIABLE HOMEBREW_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE)

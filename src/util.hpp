@@ -97,6 +97,10 @@ const bool isprime(
     const mpz_class& N
 );
 
+const bool isprime(
+    const uint64_t N
+);
+
 const mpz_class
 gcd(
     const mpz_class& A,

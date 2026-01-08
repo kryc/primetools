@@ -32,7 +32,7 @@ GetNthPrime(
     // Use wheel30 to skip non-prime candidates
     uint32_t gapword = primetools::WHEEL30GAPSUINT32;
     do {
-        primetools::increment(candidate, gapword & 0xf);
+        primetools::increment((uint64_t&)candidate, gapword & 0xf);
         gapword = std::rotr(gapword, 4);
 
         if (primetools::isprime(candidate)) {

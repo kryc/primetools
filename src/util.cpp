@@ -78,6 +78,14 @@ const bool isprime(
     // return MillerRabin(N, 40);
 }
 
+const bool isprime(
+    const uint64_t N
+)
+{
+    mpz_class n(static_cast<unsigned long>(N));
+    return isprime(n);
+}
+
 const mpz_class
 gcd(
     const mpz_class& A,
