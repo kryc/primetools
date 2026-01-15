@@ -19,7 +19,6 @@
 #include "bigint_avx.hpp"
 #include "primegenerator.hpp"
 #include "random.hpp"
-#include "trial_division_data.hpp"
 #include "util.hpp"
 
 namespace primetools {
@@ -102,16 +101,16 @@ TrialDivisionRange(
     // the gaps using a bit rotation. This also avoids a branch.
     if (Modulus == 30)
     {
-        uint32_t gapword = WHEEL30GAPSUINT32;
+        uint32_t gapword = kWheel30;
         while (candidate <= EndValue)
         {
             if (primetools::divides(N, candidate) && candidate > 1) {
                 return std::make_pair(candidate, N / candidate);
             }
 
-            primetools::increment(candidate, gapword & 0xf);
+            primetools::increment(candidate, gapword & kWheel30Mask);
 
-            gapword = std::rotr(gapword, 4);
+            gapword = std::rotr(gapword, kWheel30BitsPerGap);
         }
     }
     else
@@ -130,78 +129,78 @@ TrialDivisionRange(
     return std::nullopt;
 }
 
-template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed>
-static const std::optional<std::pair<T, T>>
-TrialDivisionRangeSimd(
-    const T& N,
-    const T& StartValue,
-    const T& EndValue,
-    const std::span<const AT, Count> GapArray
-)
-{
-#if defined(__AVX512F__)
-    constexpr size_t WordBits = sizeof(AT) * 8;
-    constexpr size_t GapsPerWord =  Packed == FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
-    constexpr uint64_t GapsMask = Packed == FastPack ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
+// template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed>
+// static const std::optional<std::pair<T, T>>
+// TrialDivisionRangeSimd(
+//     const T& N,
+//     const T& StartValue,
+//     const T& EndValue,
+//     const std::span<const AT, Count> GapArray
+// )
+// {
+// #if defined(__AVX512F__)
+//     constexpr size_t WordBits = sizeof(AT) * 8;
+//     constexpr size_t GapsPerWord =  Packed == FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
+//     constexpr uint64_t GapsMask = Packed == FastPack ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
 
-    std::array<T, 16> candidates;
-    candidates[0] = StartValue;
+//     std::array<T, 16> candidates;
+//     candidates[0] = StartValue;
 
-    // Align the candidate to 1 modulo Modulus
-    auto align_result = AlignCandidateToModulus<T>(N, candidates[0], Modulus, true);
-    if (align_result.has_value()) {
-        return align_result;
-    }
+//     // Align the candidate to 1 modulo Modulus
+//     auto align_result = AlignCandidateToModulus<T>(N, candidates[0], Modulus, true);
+//     if (align_result.has_value()) {
+//         return align_result;
+//     }
 
-    std::cout << "Starting SIMD trial division with initial candidate " << candidates[0] << std::endl;
+//     std::cout << "Starting SIMD trial division with initial candidate " << candidates[0] << std::endl;
 
-    // Initialize the rest of the candidates
-    for (size_t lane = 1; lane < 16; ++lane) {
-        candidates[lane] = candidates[lane - 1] + Modulus;
-    }
+//     // Initialize the rest of the candidates
+//     for (size_t lane = 1; lane < 16; ++lane) {
+//         candidates[lane] = candidates[lane - 1] + Modulus;
+//     }
 
-    BigIntAVX<1024> big_candidates;
-    big_candidates = candidates;
+//     BigIntAVX<1024> big_candidates;
+//     big_candidates = candidates;
 
-    if constexpr (Modulus == 30)
-    {
-        /* TODO*/
-    }
-    else
-    {
-        while (true/*candidate <= EndValue*/)
-        {
-            for (auto gapword : GapArray)
-            {
-                for (size_t index = 0; index < GapsPerWord; index++)
-                {
-                    if (big_candidates.divides(N)) {
-                        std::cout << "Found divisible candidates!" << std::endl;
-                        // Find which lane found the factor
-                        for (size_t lane = 0; lane < 16; ++lane) {
-                            if (primetools::divides(N, big_candidates.to<T>(lane)) && big_candidates.to<T>(lane) > 1) {
-                                T candidate = big_candidates.to<T>(lane);
-                                return std::make_pair(candidate, N / candidate);
-                            }
-                        }
-                    }
+//     if constexpr (Modulus == 30)
+//     {
+//         /* TODO*/
+//     }
+//     else
+//     {
+//         while (true/*candidate <= EndValue*/)
+//         {
+//             for (auto gapword : GapArray)
+//             {
+//                 for (size_t index = 0; index < GapsPerWord; index++)
+//                 {
+//                     if (big_candidates.divides(N)) {
+//                         std::cout << "Found divisible candidates!" << std::endl;
+//                         // Find which lane found the factor
+//                         for (size_t lane = 0; lane < 16; ++lane) {
+//                             if (primetools::divides(N, big_candidates.to<T>(lane)) && big_candidates.to<T>(lane) > 1) {
+//                                 T candidate = big_candidates.to<T>(lane);
+//                                 return std::make_pair(candidate, N / candidate);
+//                             }
+//                         }
+//                     }
 
-                    if constexpr(Packed == DensePack) {
-                        big_candidates += ((gapword & GapsMask) << 1);
-                    } else {
-                        big_candidates += (gapword & GapsMask);
-                    }
+//                     if constexpr(Packed == DensePack) {
+//                         big_candidates += ((gapword & GapsMask) << 1);
+//                     } else {
+//                         big_candidates += (gapword & GapsMask);
+//                     }
 
-                    gapword >>= BitSize;
-                }
-            }
-            // Increment all candidates by Modulus * Number of lanes (16)
-            big_candidates += Modulus * 16;
-        }
-    }
-#endif // __AVX512F__
-    return std::nullopt;
-}
+//                     gapword >>= BitSize;
+//                 }
+//             }
+//             // Increment all candidates by Modulus * Number of lanes (16)
+//             big_candidates += Modulus * 16;
+//         }
+//     }
+// #endif // __AVX512F__
+//     return std::nullopt;
+// }
 
 template <typename T>
 static const std::optional<std::pair<T, T>>
@@ -228,11 +227,11 @@ TrialDivision(
     std::cout << "Searching primes in range [" << lower_bound << ", " << upper_bound <<
         "] using wheel" << Modulus << " factorization." << std::endl;
 
-    if (Simd) {
-        return TrialDivisionRangeSimd<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack>(N, lower_bound, upper_bound, WHEEL510510GAPS);
-    } else {
+    // if (Simd) {
+    //     return TrialDivisionRangeSimd<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack>(N, lower_bound, upper_bound, WHEEL510510GAPS);
+    // } else {
         return TrialDivisionRange<T>(N, lower_bound, upper_bound, Modulus);
-    }
+    // }
 }
 
 template <typename T>

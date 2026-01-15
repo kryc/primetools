@@ -10,7 +10,6 @@
 
 #include <gmpxx.h>
 
-#include "trial_division_data.hpp"
 #include "wheel.hpp"
 
 namespace primetools {

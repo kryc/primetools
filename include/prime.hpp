@@ -7,8 +7,8 @@
 
 #include <gmpxx.h>
 
-#include "trial_division_data.hpp"
 #include "util.hpp"
+#include "wheel30.hpp"
 
 namespace primetools {
 
@@ -34,10 +34,10 @@ GetNthPrime(
     T index = 4; // Compensate for starting at 1 and skipping 2
 
     // Use wheel30 to skip non-prime candidates
-    uint32_t gapword = primetools::WHEEL30GAPSUINT32;
+    uint32_t gapword = kWheel30;
     do {
-        primetools::increment((uint64_t&)candidate, gapword & 0xf);
-        gapword = std::rotr(gapword, 4);
+        primetools::increment((uint64_t&)candidate, gapword & kWheel30Mask);
+        gapword = std::rotr(gapword, kWheel30BitsPerGap);
 
         if (primetools::isprime(candidate)) {
             index++;
@@ -82,13 +82,13 @@ GetPrimesInRange(
         candidate--;
     }
 
-    uint32_t gapword = primetools::WHEEL30GAPSUINT32;
+    uint32_t gapword = kWheel30;
     do {
         if (candidate >= Lower && primetools::isprime(candidate)) {
             primes.push_back(candidate);
         }
-        primetools::increment(candidate, gapword & 0xf);
-        gapword = std::rotr(gapword, 4);
+        primetools::increment(candidate, gapword & kWheel30Mask);
+        gapword = std::rotr(gapword, kWheel30BitsPerGap);
     } while (candidate <= Upper);
 
     return primes;
@@ -133,10 +133,10 @@ GetFirstNPrimes(
     T candidate = 1;
 
     // Use wheel30 to skip non-prime candidates
-    uint32_t gapword = primetools::WHEEL30GAPSUINT32;
+    uint32_t gapword = kWheel30;
     do {
-        primetools::increment(candidate, gapword & 0xf);
-        gapword = std::rotr(gapword, 4);
+        primetools::increment(candidate, gapword & kWheel30Mask);
+        gapword = std::rotr(gapword, kWheel30BitsPerGap);
 
         if (primetools::isprime(candidate)) {
             primes.push_back(candidate);

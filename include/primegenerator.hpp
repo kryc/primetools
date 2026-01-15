@@ -4,7 +4,6 @@
 #include <array>
 #include <cstdint>
 
-#include "trial_division_data.hpp"
 #include "util.hpp"
 #include "wheel.hpp"
 
