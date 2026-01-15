@@ -8,110 +8,110 @@
 #include "trial_division.hpp"
 #include "trial_division_data.hpp"
 
-static const std::array<uint8_t, 8> ExpectedGaps30 = {
-    6, 4, 2, 4, 2, 4, 6, 2
-};
-static const std::array<uint8_t, 48> ExpectedGaps210 = {
-    10, 2, 4, 2, 4, 6, 2, 6, 4, 2, 4, 6, 6, 2, 6, 4,
-    2, 6, 4, 6, 8, 4, 2, 4, 2, 4, 8, 6, 4, 6, 2, 4,
-    6, 2, 6, 6, 4, 2, 4, 6, 2, 6, 4, 2, 4, 2, 10, 2
-};
+// static const std::array<uint8_t, 8> ExpectedGaps30 = {
+//     6, 4, 2, 4, 2, 4, 6, 2
+// };
+// static const std::array<uint8_t, 48> ExpectedGaps210 = {
+//     10, 2, 4, 2, 4, 6, 2, 6, 4, 2, 4, 6, 6, 2, 6, 4,
+//     2, 6, 4, 6, 8, 4, 2, 4, 2, 4, 8, 6, 4, 6, 2, 4,
+//     6, 2, 6, 6, 4, 2, 4, 6, 2, 6, 4, 2, 4, 2, 10, 2
+// };
 
-TEST(TrialDivision, GenerateWheelGapsForModulus30Unpacked)
-{
-    static constexpr size_t BitSize = 5;
-    __uint128_t expected = 0;
-    for (size_t i = 0; i < ExpectedGaps30.size(); i++) {
-        const size_t shift = i * BitSize;
-        expected |= (__uint128_t)(ExpectedGaps30[i]) << shift;
-    }
-    // Add the final gap to complete the wheel
-    auto gaps = primetools::GenerateWheelGapsForModulus(30, BitSize, primetools::PackingType::Unpacked);
-    ASSERT_EQ(gaps.size(), 1);
-    EXPECT_EQ(gaps.at(0), expected);
-}
+// TEST(TrialDivision, GenerateWheelGapsForModulus30Unpacked)
+// {
+//     static constexpr size_t BitSize = 5;
+//     __uint128_t expected = 0;
+//     for (size_t i = 0; i < ExpectedGaps30.size(); i++) {
+//         const size_t shift = i * BitSize;
+//         expected |= (__uint128_t)(ExpectedGaps30[i]) << shift;
+//     }
+//     // Add the final gap to complete the wheel
+//     auto gaps = primetools::GenerateWheelGapsForModulus(30, BitSize, primetools::PackingType::Unpacked);
+//     ASSERT_EQ(gaps.size(), 1);
+//     EXPECT_EQ(gaps.at(0), expected);
+// }
 
-TEST(TrialDivision, GenerateWheelGapsForModulus30FastPack)
-{
-    static constexpr size_t BitSize = 5;
-    __uint128_t expected = 0;
-    for (size_t i = 0; i < ExpectedGaps30.size(); i++) {
-        const size_t shift = i * BitSize;
-        expected |= (__uint128_t)(ExpectedGaps30[i] >> 1) << shift;
-    }
-    expected <<= 1;
-    auto gaps = primetools::GenerateWheelGapsForModulus(30, BitSize, primetools::PackingType::FastPack);
-    ASSERT_EQ(gaps.size(), 1);
-    EXPECT_EQ(gaps.at(0), expected);
-}
+// TEST(TrialDivision, GenerateWheelGapsForModulus30FastPack)
+// {
+//     static constexpr size_t BitSize = 5;
+//     __uint128_t expected = 0;
+//     for (size_t i = 0; i < ExpectedGaps30.size(); i++) {
+//         const size_t shift = i * BitSize;
+//         expected |= (__uint128_t)(ExpectedGaps30[i] >> 1) << shift;
+//     }
+//     expected <<= 1;
+//     auto gaps = primetools::GenerateWheelGapsForModulus(30, BitSize, primetools::PackingType::FastPack);
+//     ASSERT_EQ(gaps.size(), 1);
+//     EXPECT_EQ(gaps.at(0), expected);
+// }
 
-TEST(TrialDivision, GenerateWheelGapsForModulus210Unpacked)
-{
-    static constexpr size_t BitSize = 5;
-    static constexpr size_t WordBits = sizeof(__uint128_t) * 8;
-    static constexpr size_t GapsPerWord =  WordBits / BitSize;
-    std::vector<__uint128_t> expected;
-    __uint128_t current = 0;
-    size_t gap_count = 0;
-    for (size_t i = 0; i < ExpectedGaps210.size(); i++) {
-        const size_t shift = gap_count * BitSize;
-        current |= (__uint128_t)(ExpectedGaps210[i]) << shift;
-        gap_count++;
-        if (gap_count == GapsPerWord) {
-            expected.push_back(current);
-            current = 0;
-            gap_count = 0;
-        }
-    }
-    if (gap_count > 0) {
-        expected.push_back(current);
-    }
-    auto gaps = primetools::GenerateWheelGapsForModulus(210, BitSize, primetools::PackingType::Unpacked);
-    ASSERT_EQ(gaps.size(), expected.size());
-    for (size_t i = 0; i < gaps.size(); i++) {
-        EXPECT_EQ(gaps.at(i), expected.at(i));
-    }
-}
+// TEST(TrialDivision, GenerateWheelGapsForModulus210Unpacked)
+// {
+//     static constexpr size_t BitSize = 5;
+//     static constexpr size_t WordBits = sizeof(__uint128_t) * 8;
+//     static constexpr size_t GapsPerWord =  WordBits / BitSize;
+//     std::vector<__uint128_t> expected;
+//     __uint128_t current = 0;
+//     size_t gap_count = 0;
+//     for (size_t i = 0; i < ExpectedGaps210.size(); i++) {
+//         const size_t shift = gap_count * BitSize;
+//         current |= (__uint128_t)(ExpectedGaps210[i]) << shift;
+//         gap_count++;
+//         if (gap_count == GapsPerWord) {
+//             expected.push_back(current);
+//             current = 0;
+//             gap_count = 0;
+//         }
+//     }
+//     if (gap_count > 0) {
+//         expected.push_back(current);
+//     }
+//     auto gaps = primetools::GenerateWheelGapsForModulus(210, BitSize, primetools::PackingType::Unpacked);
+//     ASSERT_EQ(gaps.size(), expected.size());
+//     for (size_t i = 0; i < gaps.size(); i++) {
+//         EXPECT_EQ(gaps.at(i), expected.at(i));
+//     }
+// }
 
-TEST(TrialDivision, GenerateWheelGapsForModulus210FastPack)
-{
-    static constexpr size_t BitSize = 5;
-    static constexpr size_t WordBits = sizeof(__uint128_t) * 8;
-    static constexpr size_t GapsPerWord =  (WordBits - 1) / BitSize;
-    std::vector<__uint128_t> expected;
-    __uint128_t current = 0;
-    size_t gap_count = 0;
-    for (size_t i = 0; i < ExpectedGaps210.size(); i++) {
-        const size_t shift = gap_count * BitSize;
-        current |= (__uint128_t)(ExpectedGaps210[i] >> 1) << shift;
-        gap_count++;
-        if (gap_count == GapsPerWord) {
-            current <<= 1;
-            expected.push_back(current);
-            current = 0;
-            gap_count = 0;
-        }
-    }
-    if (gap_count > 0) {
-        current <<= 1;
-        expected.push_back(current);
-    }
-    auto gaps = primetools::GenerateWheelGapsForModulus(210, BitSize, primetools::PackingType::FastPack);
-    ASSERT_EQ(gaps.size(), expected.size());
-    for (size_t i = 0; i < gaps.size(); i++) {
-        EXPECT_EQ(gaps.at(i), expected.at(i));
-    }
-}
+// TEST(TrialDivision, GenerateWheelGapsForModulus210FastPack)
+// {
+//     static constexpr size_t BitSize = 5;
+//     static constexpr size_t WordBits = sizeof(__uint128_t) * 8;
+//     static constexpr size_t GapsPerWord =  (WordBits - 1) / BitSize;
+//     std::vector<__uint128_t> expected;
+//     __uint128_t current = 0;
+//     size_t gap_count = 0;
+//     for (size_t i = 0; i < ExpectedGaps210.size(); i++) {
+//         const size_t shift = gap_count * BitSize;
+//         current |= (__uint128_t)(ExpectedGaps210[i] >> 1) << shift;
+//         gap_count++;
+//         if (gap_count == GapsPerWord) {
+//             current <<= 1;
+//             expected.push_back(current);
+//             current = 0;
+//             gap_count = 0;
+//         }
+//     }
+//     if (gap_count > 0) {
+//         current <<= 1;
+//         expected.push_back(current);
+//     }
+//     auto gaps = primetools::GenerateWheelGapsForModulus(210, BitSize, primetools::PackingType::FastPack);
+//     ASSERT_EQ(gaps.size(), expected.size());
+//     for (size_t i = 0; i < gaps.size(); i++) {
+//         EXPECT_EQ(gaps.at(i), expected.at(i));
+//     }
+// }
 
-TEST(TrialDivision, GenerateWheelGapsForModulus9699690)
-{
-    static constexpr size_t BitSize = 5;
-    auto gaps = primetools::GenerateWheelGapsForModulus(9699690, BitSize, primetools::PackingType::FastPack);
-    ASSERT_EQ(gaps.size(), primetools::WHEEL9699690GAPS.size());
-    for (size_t i =0; i < gaps.size(); i++) {
-        EXPECT_EQ(gaps[i], primetools::WHEEL9699690GAPS[i]);
-    }
-}
+// TEST(TrialDivision, GenerateWheelGapsForModulus9699690)
+// {
+//     static constexpr size_t BitSize = 5;
+//     auto gaps = primetools::GenerateWheelGapsForModulus(9699690, BitSize, primetools::PackingType::FastPack);
+//     ASSERT_EQ(gaps.size(), primetools::WHEEL9699690GAPS.size());
+//     for (size_t i =0; i < gaps.size(); i++) {
+//         EXPECT_EQ(gaps[i], primetools::WHEEL9699690GAPS[i]);
+//     }
+// }
 
 #ifdef PRIMETOOLS_ENABLE_LARGE_WHEEL_TEST
 TEST(TrialDivision, GenerateWheelGapsForModulus223092870)

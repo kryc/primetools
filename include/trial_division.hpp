@@ -17,16 +17,12 @@
 
 #include "analyse.hpp"
 #include "bigint_avx.hpp"
+#include "primegenerator.hpp"
 #include "random.hpp"
 #include "trial_division_data.hpp"
 #include "util.hpp"
 
 namespace primetools {
-
-const std::span<const __uint128_t>
-GetWheelGapsForModulus(
-    const size_t Modulus
-);
 
 template <typename T>
 static inline
@@ -86,21 +82,16 @@ AlignCandidateToModulus(
 }
 
 
-template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed>
+template <typename T>
 static const std::optional<std::pair<T, T>>
 TrialDivisionRange(
     const T& N,
     const T& StartValue,
     const T& EndValue,
-    const std::span<const AT, Count> GapArray
+    const size_t Modulus
 )
 {
-    constexpr size_t WordBits = sizeof(AT) * 8;
-    constexpr size_t GapsPerWord =  Packed == FastPack ? (WordBits - 1) / BitSize : WordBits / BitSize;
-    constexpr uint64_t GapsMask = Packed == FastPack ? (1 << (BitSize + 1)) - 2 : (1 << BitSize) - 1;
-
     T candidate = StartValue;
-
     // Align the candidate to 1 modulo Modulus
     auto align_result = AlignCandidateToModulus<T>(N, candidate, Modulus, true);
     if (align_result.has_value()) {
@@ -109,7 +100,7 @@ TrialDivisionRange(
 
     // Special case for wheel as we can use an optimization to rotate
     // the gaps using a bit rotation. This also avoids a branch.
-    if constexpr (Modulus == 30)
+    if (Modulus == 30)
     {
         uint32_t gapword = WHEEL30GAPSUINT32;
         while (candidate <= EndValue)
@@ -125,25 +116,14 @@ TrialDivisionRange(
     }
     else
     {
+        PossiblePrimeGenerator<T> generator(Modulus, candidate);
         while (candidate <= EndValue)
         {
-            for (auto gapword : GapArray)
-            {
-                for (size_t index = 0; index < GapsPerWord; index++)
-                {
-                    if (primetools::divides(N, candidate) && candidate > 1) {
-                        return std::make_pair(candidate, N / candidate);
-                    }
-
-                    if constexpr(Packed == DensePack) {
-                        primetools::increment(candidate, (gapword & GapsMask) << 1);
-                    } else {
-                        primetools::increment(candidate, gapword & GapsMask);
-                    }
-
-                    gapword >>= BitSize;
-                }
+            // std::cout << "Testing candidate " << candidate << std::endl;
+            if (primetools::divides(N, candidate) && candidate > 1) {
+                return std::make_pair(candidate, N / candidate);
             }
+            candidate = generator.Next();
         }
     }
 
@@ -221,46 +201,6 @@ TrialDivisionRangeSimd(
     }
 #endif // __AVX512F__
     return std::nullopt;
-}
-
-template <typename T>
-static const std::optional<std::pair<T, T>>
-TrialDivisionRange(
-    const T& N,
-    const T& StartValue,
-    const T& EndValue,
-    const size_t Modulus = 510510
-)
-{
-    switch(Modulus) {
-        case 200560490130:
-        {
-            auto& gaps = GetWheelGapsForModulus(Modulus);
-            return TrialDivisionRange<T, 200560490130, 5, __uint128_t, std::dynamic_extent, FastPack>(N, StartValue, EndValue, gaps);
-        }
-        case 6469693230:
-        {
-            auto& gaps = GetWheelGapsForModulus(Modulus);
-            return TrialDivisionRange<T, 6469693230, 5, __uint128_t, std::dynamic_extent, FastPack>(N, StartValue, EndValue, gaps);
-        }
-        case 223092870:
-            return TrialDivisionRange<T, 223092870, 5, __uint128_t, WHEEL223092870GAP_COUNT, FastPack>(N, StartValue, EndValue, WHEEL223092870GAPS);
-        case 9699690:
-            return TrialDivisionRange<T, 9699690, 5, __uint128_t, WHEEL9699690GAP_COUNT, FastPack>(N, StartValue, EndValue, WHEEL9699690GAPS);
-        case 510510:
-            return TrialDivisionRange<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack>(N, StartValue, EndValue, WHEEL510510GAPS);
-        case 30030:
-            return TrialDivisionRange<T, 30030, 4, uint64_t, WHEEL30030GAP_COUNT, DensePack>(N, StartValue, EndValue, WHEEL30030GAPS);
-        case 2310:
-            return TrialDivisionRange<T, 2310, 4, uint64_t, WHEEL2310GAP_COUNT, Unpacked>(N, StartValue, EndValue, WHEEL2310GAPS);
-        case 210:
-            return TrialDivisionRange<T, 210, 4, uint64_t, WHEEL210GAP_COUNT, Unpacked>(N, StartValue, EndValue, WHEEL210GAPS);
-        case 30:
-            return TrialDivisionRange<T, 30, 4, uint64_t, WHEEL30GAP_COUNT, Unpacked>(N, StartValue, EndValue, WHEEL30GAPS);
-        default:
-            std::cerr << "Error: Unsupported modulus for trial division: " << Modulus << std::endl;
-            return std::nullopt;
-    }
 }
 
 template <typename T>
@@ -597,13 +537,6 @@ inline std::optional<std::pair<mpz_class, mpz_class>>
 TrialDivisionLinear(const T& N, const size_t Base, const size_t MaxIterations) {
     return TrialDivisionWheel510510<T>(N, MaxIterations);
 }
-
-const std::vector<__uint128_t>
-GenerateWheelGapsForModulus(
-    const size_t Modulus,
-    const size_t BitSize = 5,
-    const PackingType Packing = PackingType::FastPack
-);
 
 } // namespace primetools
 

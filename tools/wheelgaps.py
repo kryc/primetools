@@ -54,7 +54,7 @@ def main(out_file: str, max_prime: int, pack: int = 0, use_128: bool = False):
     with open(out_file, "wb") as f:
         print(f"// Wheel modulus = {W}, total gaps = {len(gaps)}, bits_required = {bits}, gaps_per_word = {gaps_per_word}, word_count = {word_count}")
         print(f"static constexpr size_t WHEEL{W}GAP_COUNT = {word_count};")
-        print(f"static const {storage_type} WHEEL{W}GAPS[] = " + "{")
+        # print(f"static const {storage_type} WHEEL{W}GAPS[] = " + "{")
         print(f"#embed \"{out_file}\"")
         for i in range(0, len(gaps), gaps_per_word):
             block = gaps[i:i+gaps_per_word]
@@ -73,9 +73,9 @@ def main(out_file: str, max_prime: int, pack: int = 0, use_128: bool = False):
                 # print(f"    ((__uint128_t)0x{upper:016x}ULL << 64) | 0x{lower:016x}ULL,")
                 f.write(struct.pack("<QQ", lower, upper))
             else:
-                print(f"    0x{word:016x}ULL,")
+                # print(f"    0x{word:016x}ULL,")
                 f.write(struct.pack("<Q", word))
-        print("};")
+        # print("};")
         print()
 
     # Validate the file size

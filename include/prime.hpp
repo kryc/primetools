@@ -1,6 +1,8 @@
 #ifndef PRIME_HPP
 #define PRIME_HPP
 
+#include <array>
+#include <span>
 #include <vector>
 
 #include <gmpxx.h>
@@ -10,6 +12,11 @@
 
 namespace primetools {
 
+const std::span<const uint64_t>
+GetSmallPrimes(
+    void
+);
+
 template <typename T>
 const T
 GetNthPrime(
@@ -18,12 +25,9 @@ GetNthPrime(
 {
     if (N == 0) {
         throw std::invalid_argument("N must be greater than 0");
-    } else if (N == 1) {
-        return 2;
-    } else if (N == 2) {
-        return 3;
-    } else if (N == 3) {
-        return 5;
+    }
+    if (N <= 100) {
+        return GetSmallPrimes()[N - 1];
     }
 
     T candidate = 1;
