@@ -49,7 +49,8 @@ BrentPollardsRho(
 std::optional<std::pair<mpz_class, mpz_class>>
 PollardsPMinus1(
     const mpz_class& N,
-    const size_t B = (size_t)1 << 20
+    const size_t B = (size_t)1 << 20,
+    const size_t Bases = 1
 );
 
 }

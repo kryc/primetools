@@ -144,8 +144,8 @@ int main(
     }
     else if (action == "pminus1" || action == "p-1" || action == "pollardp1" || action == "p1" || action == "pollardp-1")
     {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " pminus1 <number> <bound>" << std::endl;
+        if (argc < 2) {
+            std::cerr << "Usage: " << argv[0] << " pminus1 <number> [--bound=<B>] [--bases=<bases>]" << std::endl;
             return 1;
         }
 
@@ -155,8 +155,9 @@ int main(
         }
 
         const mpz_class n(positionals[1]);
-        const size_t bound = positionals.size() >= 3 ? std::stoul(positionals[2]) : (1 << 20);
-        auto result = primetools::PollardsPMinus1(n, bound);
+        const size_t bound = flags.find("bound") != flags.end() ? std::stoul(flags["bound"]) : std::powl(2, 32);
+        const size_t bases = flags.find("bases") != flags.end() ? std::stoul(flags["bases"]) : 1'000'000;
+        auto result = primetools::PollardsPMinus1(n, bound, bases);
         OutputFactors(result);
     }
     else if (action == "squfof")

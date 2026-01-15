@@ -5,6 +5,7 @@
 #include "gmpxx.h"
 
 #include "pollard.hpp"
+#include "primegenerator.hpp"
 #include "util.hpp"
 
 namespace primetools {
@@ -119,21 +120,34 @@ BrentPollardsRho(
 std::optional<std::pair<mpz_class, mpz_class>>
 PollardsPMinus1(
     const mpz_class& N,
-    const size_t B
+    const size_t B,
+    const size_t Bases
 )
 {
     if (N < 2) {
         return std::nullopt;
     }
 
-    mpz_class a = 2;
-    mpz_class d;
+    PrimeGenerator<mpz_class> primegen;
+    PrimeGenerator<mpz_class> baseprimegen;
 
-    for (size_t i = 2; i <= B; ++i) {
-        a = primetools::modexp(a, i, N);
-        d = primetools::gcd(a - 1, N);
-        if (d > 1 && d < N) {
-            return std::make_pair(d, N / d);
+    for (size_t base = 1; base < Bases; ++base) {
+        mpz_class a = baseprimegen.Next();
+        mpz_class d;
+        mpz_class p = primegen.Next();
+
+        while (p <= B) {
+            // Compute the highest power of p that is <= B
+            mpz_class exp = p;
+            while (exp * p <= B) {
+                exp *= p;
+            }
+            a = primetools::modexp(a, exp, N);
+            d = primetools::gcd(a - 1, N);
+            if (d > 1 && d < N) {
+                return std::make_pair(d, N / d);
+            }
+            p = primegen.Next();
         }
     }
 
