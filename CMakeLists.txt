@@ -36,23 +36,28 @@ if(APPLE)
     link_directories(${HOMEBREW_PREFIX}/lib)
 endif()
 
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-add_executable(primetools ${SOURCES})
-target_include_directories(primetools PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(primetools PRIVATE gmp gmpxx)
+file(GLOB_RECURSE LIB_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/lib/*.cpp)
+add_library(libprimetools STATIC ${LIB_SOURCES})
+target_include_directories(libprimetools PRIVATE
+                                ${CMAKE_CURRENT_SOURCE_DIR}/lib/
+                                ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+
+file(GLOB_RECURSE PRIMETOOLS_SOURCES
+                            ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+add_executable(primetools ${PRIMETOOLS_SOURCES})
+target_include_directories(primetools PRIVATE
+                            ${CMAKE_CURRENT_SOURCE_DIR}/src/
+                            ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_link_libraries(primetools PRIVATE libprimetools gmp gmpxx)
+add_dependencies(primetools libprimetools)
 
 # Tests
-file(GLOB_RECURSE TEST_SOURCES 
-    ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
-)
-list(REMOVE_ITEM TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+file(GLOB_RECURSE TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
 add_executable(unittest EXCLUDE_FROM_ALL ${TEST_SOURCES})
-
-target_include_directories(unittest
-    PUBLIC
+target_include_directories(unittest PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test/
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/
 )
-target_link_libraries(unittest gtest_main gmp gmpxx)
+target_link_libraries(unittest gtest_main libprimetools gmp gmpxx)
 add_test(NAME unittest COMMAND unittest)
+add_dependencies(unittest libprimetools)
