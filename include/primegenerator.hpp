@@ -22,18 +22,26 @@ public:
         Initialize(Modulus, StartValue);
     }
 
-    T Next(
+    const T& Next(
         void
     )
     {
         // Handle small primes below the wheel
         if (m_Count < m_SmallPrimesForWheel.size())
         {
-            return m_SmallPrimesForWheel[m_Count++];
+            m_Temp = m_SmallPrimesForWheel[m_Count++];
+            return m_Temp;
         }
         m_Count++;
         const T gap = GetNextGap();
         m_CurrentValue += gap;
+        return m_CurrentValue;
+    }
+
+    const T& Current(
+        void
+    ) const
+    {
         return m_CurrentValue;
     }
 
@@ -61,11 +69,12 @@ private:
         }
     }
 
-    const T GetNextGap(
+    const uint64_t
+    GetNextGap(
         void
     )
     {
-        T gap;
+        uint64_t gap;
         do
         {
             gap = (m_Gapword & kGapMask);
@@ -92,27 +101,23 @@ private:
     size_t m_WheelIndex = 0;
     size_t m_GapIndex = 0;
     T m_CurrentValue;
+    T m_Temp;
 };
 
 template<typename T>
 class PrimeGenerator : public PossiblePrimeGenerator<T>
 {
 public:
-    T Next(
+    const T& Next(
         void
     )
     {
-        T candidate;
-        do {
-            candidate = PossiblePrimeGenerator<T>::Next();
-        } while (!primetools::isprime(candidate));
-        return candidate;
-    }
-    void Reset(
-        void
-    )
-    {
-        PossiblePrimeGenerator<T>::Reset();
+        for(;;) {
+            const T& candidate = PossiblePrimeGenerator<T>::Next();
+            if (primetools::isprime(candidate)) {
+                return candidate;
+            }
+        }
     }
     void Skip(
         const size_t Count

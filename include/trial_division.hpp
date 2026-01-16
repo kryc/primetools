@@ -90,9 +90,9 @@ TrialDivisionRange(
     const size_t Modulus
 )
 {
-    T candidate = StartValue;
+    T starting_candidate = StartValue;
     // Align the candidate to 1 modulo Modulus
-    auto align_result = AlignCandidateToModulus<T>(N, candidate, Modulus, true);
+    auto align_result = AlignCandidateToModulus<T>(N, starting_candidate, Modulus, true);
     if (align_result.has_value()) {
         return align_result;
     }
@@ -102,28 +102,27 @@ TrialDivisionRange(
     if (Modulus == 30)
     {
         uint32_t gapword = kWheel30;
-        while (candidate <= EndValue)
+        while (starting_candidate <= EndValue)
         {
-            if (primetools::divides(N, candidate) && candidate > 1) {
-                return std::make_pair(candidate, N / candidate);
+            if (primetools::divides(N, starting_candidate) && starting_candidate > 1) {
+                return std::make_pair(starting_candidate, N / starting_candidate);
             }
 
-            primetools::increment(candidate, gapword & kWheel30Mask);
-
+            primetools::increment(starting_candidate, gapword & kWheel30Mask);
             gapword = std::rotr(gapword, kWheel30BitsPerGap);
         }
     }
     else
     {
-        PossiblePrimeGenerator<T> generator(Modulus, candidate);
-        while (candidate <= EndValue)
+        PossiblePrimeGenerator<T> generator(Modulus, starting_candidate);
+        while (generator.Current() <= EndValue)
         {
+            const T& candidate = generator.Next();
             // std::cout << "Testing candidate " << candidate << std::endl;
             if (primetools::divides(N, candidate) && candidate > 1) {
                 return std::make_pair(candidate, N / candidate);
             }
-            candidate = generator.Next();
-        }
+        } 
     }
 
     return std::nullopt;

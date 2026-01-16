@@ -6,7 +6,6 @@
 
 #include "prime.hpp"
 #include "trial_division.hpp"
-#include "trial_division_data.hpp"
 
 // static const std::array<uint8_t, 8> ExpectedGaps30 = {
 //     6, 4, 2, 4, 2, 4, 6, 2
