@@ -56,9 +56,11 @@ GetUpperAndLowerBounds(
 }
 
 template <typename T>
-static inline const std::optional<PrimeFactors<T>>
+static inline const size_t
 AlignCandidateToModulus(
     const T& N,
+    PrimeFactors<T>& Factors,
+    T& Remainder,
     T& Candidate,
     const size_t Modulus,
     const bool StepBack = false
@@ -70,22 +72,29 @@ AlignCandidateToModulus(
     }
 
     // Align candidate to be congruent to 1 modulo Modulus
+    size_t result = 0;
     while (primetools::modulo(Candidate, Modulus) != 1 && Candidate > 1) {
         // Check if we found a factor
-        if (primetools::divides(N, Candidate) && Candidate > 1) {
-            return PrimeFactors<T>::FromPair(Candidate, N / Candidate);
+        if (primetools::divides(N, Candidate) && primetools::isprime(Candidate)) {
+            while(primetools::divides(Remainder, Candidate)) {
+                Factors.AddFactor(Candidate);
+                Remainder /= Candidate;
+            }
+            result += 1;
         }
         Candidate += StepBack ? -2 : 2;
     }
 
-    return std::nullopt;
+    return result;
 }
 
 
 template <typename T>
-static const std::optional<PrimeFactors<T>>
+static const size_t
 TrialDivisionRange(
     const T& N,
+    PrimeFactors<T>& Factors,
+    T& Remainder,
     const T& StartValue,
     const T& EndValue,
     const size_t Modulus
@@ -93,9 +102,14 @@ TrialDivisionRange(
 {
     T starting_candidate = StartValue;
     // Align the candidate to 1 modulo Modulus
-    auto align_result = AlignCandidateToModulus<T>(N, starting_candidate, Modulus, true);
-    if (align_result.has_value()) {
-        return align_result;
+    const size_t align_result = AlignCandidateToModulus<T>(N, Factors, Remainder, starting_candidate, Modulus, true);
+    if (align_result) {
+        if (isprime(Remainder)) {
+            Factors.AddFactor(Remainder);
+            return align_result + 1;
+        } else if (Remainder == 1) {
+            return align_result;
+        }
     }
 
     // Special case for wheel as we can use an optimization to rotate
@@ -105,8 +119,15 @@ TrialDivisionRange(
         uint32_t gapword = kWheel30;
         while (starting_candidate <= EndValue)
         {
-            if (primetools::divides(N, starting_candidate) && starting_candidate > 1) {
-                return PrimeFactors<T>::FromPair(starting_candidate, N / starting_candidate);
+            while (primetools::divides(N, starting_candidate) && primetools::isprime(starting_candidate)) {
+                Factors.AddFactor(starting_candidate);
+                Remainder /= starting_candidate;
+                if (isprime(Remainder)) {
+                    Factors.AddFactor(Remainder);
+                    return Factors.Count();
+                } else if (Remainder == 1) {
+                    return Factors.Count();
+                }
             }
 
             primetools::increment(starting_candidate, gapword & kWheel30Mask);
@@ -120,13 +141,23 @@ TrialDivisionRange(
         {
             const T& candidate = generator.Next();
             // std::cout << "Testing candidate " << candidate << std::endl;
-            if (primetools::divides(N, candidate) && candidate > 1) {
-                return PrimeFactors<T>::FromPair(candidate, N / candidate);
+            if (primetools::divides(N, candidate) && primetools::isprime(candidate)) {
+                // std::cout << "Found factor " << candidate << std::endl;
+                while (primetools::divides(Remainder, candidate)) {
+                    Factors.AddFactor(candidate);
+                    Remainder /= candidate;
+                }
+                if (isprime(Remainder)) {
+                    Factors.AddFactor(Remainder);
+                    break;
+                } else if (Remainder == 1) {
+                    break;
+                }
             }
         } 
     }
 
-    return std::nullopt;
+    return Factors.Count();
 }
 
 // template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed>
@@ -203,9 +234,11 @@ TrialDivisionRange(
 // }
 
 template <typename T>
-static const std::optional<PrimeFactors<T>>
-TrialDivision(
+static const size_t
+TrialDivisionLinear(
     const T& N,
+    PrimeFactors<T>& Factors,
+    T& Remainder,
     const size_t Modulus,
     const bool GuessSize = true,
     const size_t Bits = 0,
@@ -215,7 +248,7 @@ TrialDivision(
 )
 {
     if (N < 2) {
-        return std::nullopt;
+        return 0;
     }
 
     // Calculate the bounds and bits
@@ -230,54 +263,54 @@ TrialDivision(
     // if (Simd) {
     //     return TrialDivisionRangeSimd<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack>(N, lower_bound, upper_bound, WHEEL510510GAPS);
     // } else {
-        return TrialDivisionRange<T>(N, lower_bound, upper_bound, Modulus);
+        return TrialDivisionRange<T>(N, Factors, Remainder, lower_bound, upper_bound, Modulus);
     // }
 }
 
-template <typename T>
-const std::optional<PrimeFactors<T>>
-TrialDivisionBitflip(
-    const T& N,
-    const size_t MaxIterations,
-    const bool UseGuessSize = true
-)
-{
-    if (N < 2) {
-        return std::nullopt;
-    }
+// template <typename T>
+// const std::optional<PrimeFactors<T>>
+// TrialDivisionBitflip(
+//     const T& N,
+//     const size_t MaxIterations,
+//     const bool UseGuessSize = true
+// )
+// {
+//     if (N < 2) {
+//         return std::nullopt;
+//     }
 
-    // Calculate the size of N's constituent primes
-    const size_t bits = primetools::GuessSizeOfPrimeFactors(N, true);
+//     // Calculate the size of N's constituent primes
+//     const size_t bits = primetools::GuessSizeOfPrimeFactors(N, true);
     
-    // Get the square root of N as this is our upper bound for trial division
-    const T upper_bound = T(sqrt(N));
-    const size_t upper_bound_bits = primetools::bit_size(upper_bound);
+//     // Get the square root of N as this is our upper bound for trial division
+//     const T upper_bound = T(sqrt(N));
+//     const size_t upper_bound_bits = primetools::bit_size(upper_bound);
 
-    std::cout << "Trying random factorization of " << bits << "-bit primes " << std::endl;
-    std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
+//     std::cout << "Trying random factorization of " << bits << "-bit primes " << std::endl;
+//     std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
     
-    // We want to toggle bits between the highest and lowest bit
-    const size_t bit_range = UseGuessSize ? bits - 2 : upper_bound_bits - 2; // Exclude highest and lowest bit
+//     // We want to toggle bits between the highest and lowest bit
+//     const size_t bit_range = UseGuessSize ? bits - 2 : upper_bound_bits - 2; // Exclude highest and lowest bit
 
-    // Make the first candidate the highest and lowest bit set
-    T candidate = (T(1) << (bit_range + 1)) | 1;
+//     // Make the first candidate the highest and lowest bit set
+//     T candidate = (T(1) << (bit_range + 1)) | 1;
 
-    // Set up our PRNG
-    primetools::MiniPRNG32 prng;
+//     // Set up our PRNG
+//     primetools::MiniPRNG32 prng;
 
-    for (size_t i = 0; i < MaxIterations; ++i) {
-        // Flip a random bit in the candidate
-        const size_t bit = (prng.Next() % bit_range) + 1;
-        primetools::toggle_bit(candidate, bit);
+//     for (size_t i = 0; i < MaxIterations; ++i) {
+//         // Flip a random bit in the candidate
+//         const size_t bit = (prng.Next() % bit_range) + 1;
+//         primetools::toggle_bit(candidate, bit);
 
-        // Check if it divides N
-        if (primetools::divides(N, candidate)) {
-            return PrimeFactors<T>::FromPair(candidate, N / candidate);
-        }
-    }
+//         // Check if it divides N
+//         if (primetools::divides(N, candidate)) {
+//             return PrimeFactors<T>::FromPair(candidate, N / candidate);
+//         }
+//     }
 
-    return std::nullopt;
-};
+//     return std::nullopt;
+// };
 
 static constexpr size_t DefaultBlockSize = 1'000'000;
 
@@ -293,9 +326,10 @@ RoundBlockSizeToModulus(
 
 // Worker function for TrialDivisionMT
 template <typename T>
-std::optional<PrimeFactors<T>>
+const size_t
 TrialDivisionMTWorker(
     const T& N,
+    PrimeFactors<T>& Factors,
     const T& LowerBound,
     const T& UpperBound,
     const T& ChunkSize,
@@ -309,32 +343,50 @@ TrialDivisionMTWorker(
 ) {
     T thread_start = LowerBound + (ThreadId * ChunkSize);
     T thread_end = thread_start + ChunkSize;
-    while (!Found.load(std::memory_order_relaxed) && thread_start <= UpperBound) {
+    while (!Found.load() && thread_start <= UpperBound) {
         T chunk_index = (thread_start - LowerBound) / ChunkSize;
         {
             std::lock_guard<std::mutex> lock(StatusMutex);
             if (chunk_index > CurrentChunk) {
                 CurrentChunk = chunk_index;
             }
-            std::cout << '\r' << "Chunk " << CurrentChunk << " of " << Chunks << " (" <<
+            std::cout << '\r' << "Chunk " << CurrentChunk <<
+            " (" << thread_start << " to " << thread_end << ")" <<
+            " of " << Chunks << " (" <<
                 (CurrentChunk * 100) / Chunks << "%) " << std::flush;
         }
-        auto result = TrialDivisionRange<T>(N, thread_start, thread_end, Modulus);
+        // Make a thread-local copy of Factors and Remainder to avoid contention
+        PrimeFactors<T> thread_factors;
+        T thread_remainder;
+        {
+            std::lock_guard<std::mutex> lock(StatusMutex);
+            thread_remainder = N / Factors.Product();
+        }
+        if (thread_remainder == 1) {
+            Found.store(true);
+            return Factors.Count();
+        }
+        auto result = TrialDivisionRange<T>(N, thread_factors, thread_remainder, thread_start, thread_end, Modulus);
         if (result) {
-            Found.store(true, std::memory_order_relaxed);
-            return result;
+            std::lock_guard<std::mutex> lock(StatusMutex);
+            Factors.Update(thread_factors);
+            if (Factors.Product() == N) {
+                Found.store(true);
+            }
         }
         std::this_thread::yield();
         primetools::increment(thread_start, NumThreads * ChunkSize);
         primetools::increment(thread_end, NumThreads * ChunkSize);
     }
-    return std::nullopt;
+    return Factors.Count();
 }
 
 template <typename T>
-const std::optional<PrimeFactors<T>>
+const size_t
 TrialDivisionMT(
     const T& N,
+    PrimeFactors<T>& Factors,
+    T& Remainder,
     const size_t Threads,
     const size_t BlockSize,
     const bool GuessSize,
@@ -352,7 +404,7 @@ TrialDivisionMT(
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
     std::atomic<bool> found{false};
-    std::vector<std::future<std::optional<PrimeFactors<T>>>> futures;
+    std::vector<std::future<size_t>> futures;
 
     // const T chunk_size = Modulus * block_size;
     const T diff = upper_bound - lower_bound;
@@ -368,7 +420,8 @@ TrialDivisionMT(
 
     for (size_t i = 0; i < num_threads; i++) {
         futures.emplace_back(std::async(std::launch::async, TrialDivisionMTWorker<T>,
-            std::cref(N),
+            std::ref(N),
+            std::ref(Factors),
             std::cref(lower_bound),
             std::cref(upper_bound),
             std::cref(block_size),
@@ -382,14 +435,12 @@ TrialDivisionMT(
         ));
     }
 
-    std::optional<PrimeFactors<T>> result;
+    size_t result = 0;
     for (auto& fut : futures) {
-        auto res = fut.get();
-        if (res) {
-            result = res;
-            break;
-        }
+        result += fut.get();
     }
+
+    Remainder = N / Factors.Product();
 
     // Terminate the status line
     std::cout << std::endl;
@@ -398,9 +449,10 @@ TrialDivisionMT(
 
 // Worker function for TrialDivisionRandomMT
 template <typename T>
-std::optional<PrimeFactors<T>>
+const size_t
 TrialDivisionRandomMTWorker(
     const T& N,
+    PrimeFactors<T>& Factors,
     const T& LowerBound,
     const T& Chunks,
     const size_t Modulus,
@@ -424,6 +476,18 @@ TrialDivisionRandomMTWorker(
     // Initialize the PRNG
     MiniPRNG64 prng(ThreadID);
 
+    // Create a thread-local copy of prime factors
+    PrimeFactors<T> thread_factors;
+    T thread_remainder;
+    {
+        std::lock_guard<std::mutex> lock(StatusMutex);
+        thread_remainder = N / Factors.Product();
+    }
+    if (thread_remainder == 1) {
+        Found.store(true);
+        return 0;
+    }
+
     T start_block = 0;
     while (!Found.load(std::memory_order_relaxed)) {
         primetools::increment(start_block, prng.Next());
@@ -438,20 +502,25 @@ TrialDivisionRandomMTWorker(
         //     std::lock_guard<std::mutex> lock(StatusMutex);
         //     std::cout << '\r' << "Trying block index " << start_block << "/" << threads_chunks << std::flush;
         // }
-        auto result = TrialDivisionRange<T>(N, thread_start, thread_end, Modulus);
+        const size_t result = TrialDivisionRange<T>(N, thread_factors, thread_remainder, thread_start, thread_end, Modulus);
         if (result) {
-            Found.store(true, std::memory_order_relaxed);
+            std::lock_guard<std::mutex> lock(StatusMutex);
+            Factors.Update(thread_factors);
+            if (Factors.Product() == N) {
+                Found.store(true);
+            }
             return result;
         }
         std::this_thread::yield();
     }
-    return std::nullopt;
+    return 0;
 }
 
 template <typename T>
-const std::optional<PrimeFactors<T>>
+const size_t
 TrialDivisionRandomMT(
     const T& N,
+    PrimeFactors<T>& Factors,
     const size_t Threads,
     const size_t BlockSize,
     const bool GuessSize,
@@ -466,7 +535,7 @@ TrialDivisionRandomMT(
     const size_t block_size = RoundBlockSizeToModulus(BlockSize ? BlockSize : DefaultBlockSize, Modulus);
 
     std::atomic<bool> found{false};
-    std::vector<std::future<std::optional<PrimeFactors<T>>>> futures;
+    std::vector<std::future<size_t>> futures;
 
     // Get bounds and bits
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
@@ -490,6 +559,7 @@ TrialDivisionRandomMT(
     for (size_t i = 0; i < effective_threads; i++) {
         futures.emplace_back(std::async(std::launch::async, TrialDivisionRandomMTWorker<T>,
             std::cref(N),
+            std::ref(Factors),
             std::cref(lower_bound),
             std::cref(chunks),
             Modulus,
@@ -501,7 +571,7 @@ TrialDivisionRandomMT(
         ));
     }
 
-    std::optional<PrimeFactors<T>> result;
+    size_t result;
     for (auto& fut : futures) {
         auto res = fut.get();
         if (res) {
@@ -513,28 +583,55 @@ TrialDivisionRandomMT(
     return result;
 }
 
-const std::optional<PrimeFactors<mpz_class>>
+template <typename T>
+const std::optional<PrimeFactors<T>>
+TrialDivision(
+    const T& N,
+    const size_t Threads = 0,
+    const size_t BlockSize = 0,
+    const bool GuessSize = true,
+    const size_t Bits = 0,
+    const T& RangeLower = 0,
+    const T& RangeUpper = 0,
+    const size_t Modulus = 510510
+)
+{
+    PrimeFactors<T> factors;
+    T remainder = N;
+    const size_t result = Threads > 1
+        ? TrialDivisionMT<T>(N, factors, remainder, Threads, BlockSize, GuessSize, Bits, RangeLower, RangeUpper, Modulus)
+        : TrialDivisionLinear<T>(N, factors, remainder, Modulus, GuessSize, Bits, RangeLower, RangeUpper, false);
+
+    if (result > 0) {
+        return factors;
+    } else {
+        return std::nullopt;
+    }
+}
+
+template <typename T>
+const std::optional<PrimeFactors<T>>
 TrialDivisionRandom(
     const mpz_class& N,
+    const size_t Threads = 0,
+    const size_t BlockSize = 0,
     const bool GuessSize = true,
     const size_t Bits = 0,
     const mpz_class& RangeLower = 0,
     const mpz_class& RangeUpper = 0,
-    const uint64_t Seed = 0,
     const size_t Modulus = 510510,
+    const uint64_t Seed = 0,
     const size_t MaxIterations = std::numeric_limits<size_t>::max()
-);
+)
+{
+    PrimeFactors<T> factors;
+    const size_t result = TrialDivisionRandomMT<T>(N, factors, Threads, BlockSize, GuessSize, Bits, RangeLower, RangeUpper, Modulus);
 
-const std::optional<PrimeFactors<mpz_class>>
-TrialDivisionSimd(
-    const mpz_class& N,
-    const size_t MaxIterations
-);
-
-template <typename T>
-inline std::optional<PrimeFactors<T>>
-TrialDivisionLinear(const T& N, const size_t Base, const size_t MaxIterations) {
-    return TrialDivisionWheel510510<T>(N, MaxIterations);
+    if (result > 0) {
+        return factors;
+    } else {
+        return std::nullopt;
+    }
 }
 
 } // namespace primetools

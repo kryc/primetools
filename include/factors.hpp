@@ -151,7 +151,11 @@ public:
         T prod = 1;
         T factor;
         for (const auto& [prime, count] : m_FactorCounts) {
-            mpz_pow_ui(factor.get_mpz_t(), prime.get_mpz_t(), count);
+            if constexpr (std::is_same_v<T, mpz_class>) {
+                mpz_pow_ui(factor.get_mpz_t(), prime.get_mpz_t(), count);
+            } else {
+                factor = static_cast<T>(std::pow(prime, count));
+            }
             prod *= factor;
         }
         return prod;

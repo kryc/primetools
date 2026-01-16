@@ -27,7 +27,7 @@ public:
     )
     {
         // Handle small primes below the wheel
-        if (m_Count < m_SmallPrimesForWheel.size())
+        if (m_Count < m_SmallPrimesForWheel.size() && m_CurrentValue == 1)
         {
             m_Temp = m_SmallPrimesForWheel[m_Count++];
             return m_Temp;

@@ -40,7 +40,7 @@ Factorise(
 
     // Check for small prime factors
     std::cout << "Checking small primes..." << std::endl;
-    result = TrialDivision(N, 510510, false, 0, T(1), T(1 << 28));
+    result = TrialDivision(N);
     if (result) {
         return result;
     }

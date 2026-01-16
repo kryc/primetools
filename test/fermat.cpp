@@ -24,8 +24,9 @@ TEST(Fermat, StandardFermat)
 
         const auto factors = primetools::FermatFactorisation(N, 0, std::numeric_limits<size_t>::max());
         ASSERT_TRUE(factors.has_value());
-        EXPECT_EQ((factors->first == p && factors->second == q) ||
-                  (factors->first == q && factors->second == p), true);
+        EXPECT_EQ(factors->Count(), 2);
+        EXPECT_TRUE(factors->HasFactor(p));
+        EXPECT_TRUE(factors->HasFactor(q));
     }
 }
 
@@ -38,8 +39,9 @@ TEST(Fermat, FermatFactorisationAlgorithm2)
 
         const auto factors = primetools::FermatFactorisationAlgorithm2(N, std::numeric_limits<size_t>::max());
         ASSERT_TRUE(factors.has_value());
-        EXPECT_EQ((factors->first == p && factors->second == q) ||
-                  (factors->first == q && factors->second == p), true);
+        EXPECT_EQ(factors->Count(), 2);
+        EXPECT_TRUE(factors->HasFactor(p));
+        EXPECT_TRUE(factors->HasFactor(q));
     }
 }
 
@@ -52,8 +54,9 @@ TEST(Fermat, ModifiedFermatFactorisation4)
 
         const auto factors = primetools::ModifiedFermatFactorisation4(N, std::numeric_limits<size_t>::max());
         ASSERT_TRUE(factors.has_value());
-        EXPECT_EQ((factors->first == p && factors->second == q) ||
-                  (factors->first == q && factors->second == p), true);
+        EXPECT_EQ(factors->Count(), 2);
+        EXPECT_TRUE(factors->HasFactor(p));
+        EXPECT_TRUE(factors->HasFactor(q));
     }
 }
 
@@ -77,7 +80,8 @@ TEST(Fermat, FMod20Precomp)
 
         const auto factors = primetools::FMMod20Precomp(N, std::numeric_limits<size_t>::max());
         ASSERT_TRUE(factors.has_value());
-        EXPECT_EQ((factors->first == p && factors->second == q) ||
-                  (factors->first == q && factors->second == p), true);
+        EXPECT_EQ(factors->Count(), 2);
+        EXPECT_TRUE(factors->HasFactor(p));
+        EXPECT_TRUE(factors->HasFactor(q));
     }
 }

@@ -207,21 +207,8 @@ int main(
 
         std::cout << "Random prime factorization of " << primetools::TruncateNumber(n) << std::endl;
 
-        if (threads == 0 || threads > 1) {
-            if (primetools::fits_uint128(n)) {
-                auto result = primetools::TrialDivisionRandomMT<__uint128_t>(primetools::mpz_to_uint128(n), threads, blocksize, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), modulus);
-                OutputFactors(result);
-            }
-            else
-            {
-                auto result = primetools::TrialDivisionRandomMT<mpz_class>(n, threads, blocksize, !noguess, bits, start, end, modulus);
-                OutputFactors(result);
-            }
-        }
-        else {
-            auto result = primetools::TrialDivisionRandom(n, !noguess, bits, start, end, seed, modulus, max_iterations);
-            OutputFactors(result);
-        }
+        auto result = primetools::TrialDivisionRandom<mpz_class>(n, threads, blocksize, !noguess, bits, start, end, modulus, seed, max_iterations);
+        OutputFactors(result);
     }
     else if (action == "trial" || action == "wheel" || action == "trialdivision" || action == "td")
     {
@@ -247,7 +234,7 @@ int main(
         const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"]) : mpz_class(0);
         const bool noguess = flags.find("no-guess") != flags.end();
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
-        const bool simd = flags.find("simd") != flags.end() || flags.find("use-simd") != flags.end();
+        // const bool simd = flags.find("simd") != flags.end() || flags.find("use-simd") != flags.end();
         const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
         const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(flags["blocksize"]) : 0;
 
@@ -256,55 +243,35 @@ int main(
             auto result = primetools::TrialDivisionSimd(n, max_iterations);
             OutputFactors(result);
         }
-        else */if (threads == 0 || threads > 1) {
-            if (primetools::fits_uint128(n)) {
-                auto result = primetools::TrialDivisionMT<__uint128_t>(primetools::mpz_to_uint128(n), threads, blocksize, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), modulus);
-                OutputFactors(result);
-            }
-            else
-            {
-                auto result = primetools::TrialDivisionMT(n, threads, blocksize, !noguess, bits, start, end, modulus);
-                OutputFactors(result);
-            }
+        else */
+        if (primetools::fits_uint128(n)) {
+            auto result = primetools::TrialDivision<__uint128_t>(primetools::mpz_to_uint128(n), threads, blocksize, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), modulus);
+            OutputFactors(result);
         }
-        else {
-            if (n.fits_ulong_p()) {
-                auto result = primetools::TrialDivision<uint64_t>(n.get_ui(), modulus, !noguess, bits, start.get_ui(), end.get_ui(), simd);
-                OutputFactors(result);
-            }
-            // Check if it fits a __uint128t
-            else if( primetools::fits_uint128(n) )
-            {
-                __uint128_t n128 = primetools::mpz_to_uint128(n);
-                auto result = primetools::TrialDivision<__uint128_t>(n128, modulus, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), simd);
-                OutputFactors(result);
-            
-            }
-            else
-            {
-                auto result = primetools::TrialDivision<mpz_class>(n, modulus, !noguess, bits, start, end, simd);
-                OutputFactors(result);
-            }  
+        else
+        {
+            auto result = primetools::TrialDivision(n, threads, blocksize, !noguess, bits, start, end, modulus);
+            OutputFactors(result);
         }
     }
-    else if (action == "bitflip")
-    {
-        if (argc < 3) {
-            std::cerr << "Usage: " << argv[0] << " trialdivision <number> [max_iterations]" << std::endl;
-            return 1;
-        }
+    // else if (action == "bitflip")
+    // {
+    //     if (argc < 3) {
+    //         std::cerr << "Usage: " << argv[0] << " trialdivision <number> [max_iterations]" << std::endl;
+    //         return 1;
+    //     }
 
-        if (!primetools::is_numeric(positionals[1])) {
-            std::cerr << "Error: Input is not a valid number." << std::endl;
-            return 1;
-        }
+    //     if (!primetools::is_numeric(positionals[1])) {
+    //         std::cerr << "Error: Input is not a valid number." << std::endl;
+    //         return 1;
+    //     }
 
-        const mpz_class n(positionals[1]);
-        const size_t max_iterations = argc == 5 ? std::stoul(argv[4]) : std::numeric_limits<size_t>::max();
+    //     const mpz_class n(positionals[1]);
+    //     const size_t max_iterations = argc == 5 ? std::stoul(argv[4]) : std::numeric_limits<size_t>::max();
 
-        auto result = primetools::TrialDivisionBitflip(n, max_iterations);
-        OutputFactors(result);
-    }
+    //     auto result = primetools::TrialDivisionBitflip(n, max_iterations);
+    //     OutputFactors(result);
+    // }
     else if (action == "isprime")
     {
         if (argc != 3) {
