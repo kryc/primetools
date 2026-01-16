@@ -7,11 +7,14 @@
 #include <immintrin.h>
 #endif
 
+#include <gmpxx.h>
+
+#include "factors.hpp"
 #include "trial_division.hpp"
 
 namespace primetools {
 
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 TrialDivisionSimd(
     const mpz_class& N,
     const size_t MaxIterations

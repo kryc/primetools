@@ -6,6 +6,7 @@
 
 #include <gmpxx.h>
 
+#include "factors.hpp"
 #include "fermat.hpp"
 #include "pollard.hpp"
 #include "shanks.hpp"
@@ -14,14 +15,14 @@
 namespace primetools {
 
 // Factorise a perfect square
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 FactorisePerfectSquare(
     const mpz_class& N
 );
 
 // Try to factorise with increasing complexity
 template <typename T>
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<T>>
 Factorise(
     const T& N
 )

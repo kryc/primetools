@@ -17,6 +17,7 @@
 
 #include "analyse.hpp"
 #include "bigint_avx.hpp"
+#include "factors.hpp"
 #include "primegenerator.hpp"
 #include "random.hpp"
 #include "util.hpp"
@@ -55,7 +56,7 @@ GetUpperAndLowerBounds(
 }
 
 template <typename T>
-static inline const std::optional<std::pair<T, T>>
+static inline const std::optional<PrimeFactors<T>>
 AlignCandidateToModulus(
     const T& N,
     T& Candidate,
@@ -72,7 +73,7 @@ AlignCandidateToModulus(
     while (primetools::modulo(Candidate, Modulus) != 1 && Candidate > 1) {
         // Check if we found a factor
         if (primetools::divides(N, Candidate) && Candidate > 1) {
-            return std::make_pair(Candidate, N / Candidate);
+            return PrimeFactors<T>::FromPair(Candidate, N / Candidate);
         }
         Candidate += StepBack ? -2 : 2;
     }
@@ -82,7 +83,7 @@ AlignCandidateToModulus(
 
 
 template <typename T>
-static const std::optional<std::pair<T, T>>
+static const std::optional<PrimeFactors<T>>
 TrialDivisionRange(
     const T& N,
     const T& StartValue,
@@ -105,7 +106,7 @@ TrialDivisionRange(
         while (starting_candidate <= EndValue)
         {
             if (primetools::divides(N, starting_candidate) && starting_candidate > 1) {
-                return std::make_pair(starting_candidate, N / starting_candidate);
+                return PrimeFactors<T>::FromPair(starting_candidate, N / starting_candidate);
             }
 
             primetools::increment(starting_candidate, gapword & kWheel30Mask);
@@ -120,7 +121,7 @@ TrialDivisionRange(
             const T& candidate = generator.Next();
             // std::cout << "Testing candidate " << candidate << std::endl;
             if (primetools::divides(N, candidate) && candidate > 1) {
-                return std::make_pair(candidate, N / candidate);
+                return PrimeFactors<T>::FromPair(candidate, N / candidate);
             }
         } 
     }
@@ -129,7 +130,7 @@ TrialDivisionRange(
 }
 
 // template <typename T, const size_t Modulus, const size_t BitSize, typename AT, const size_t Count, const PackingType Packed>
-// static const std::optional<std::pair<T, T>>
+// static const std::optional<PrimeFactors<T>>
 // TrialDivisionRangeSimd(
 //     const T& N,
 //     const T& StartValue,
@@ -202,7 +203,7 @@ TrialDivisionRange(
 // }
 
 template <typename T>
-static const std::optional<std::pair<T, T>>
+static const std::optional<PrimeFactors<T>>
 TrialDivision(
     const T& N,
     const size_t Modulus,
@@ -234,7 +235,7 @@ TrialDivision(
 }
 
 template <typename T>
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<T>>
 TrialDivisionBitflip(
     const T& N,
     const size_t MaxIterations,
@@ -271,7 +272,7 @@ TrialDivisionBitflip(
 
         // Check if it divides N
         if (primetools::divides(N, candidate)) {
-            return std::make_pair(candidate, N / candidate);
+            return PrimeFactors<T>::FromPair(candidate, N / candidate);
         }
     }
 
@@ -292,7 +293,7 @@ RoundBlockSizeToModulus(
 
 // Worker function for TrialDivisionMT
 template <typename T>
-std::optional<std::pair<T, T>>
+std::optional<PrimeFactors<T>>
 TrialDivisionMTWorker(
     const T& N,
     const T& LowerBound,
@@ -331,7 +332,7 @@ TrialDivisionMTWorker(
 }
 
 template <typename T>
-const std::optional<std::pair<T, T>>
+const std::optional<PrimeFactors<T>>
 TrialDivisionMT(
     const T& N,
     const size_t Threads,
@@ -351,7 +352,7 @@ TrialDivisionMT(
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
     std::atomic<bool> found{false};
-    std::vector<std::future<std::optional<std::pair<T, T>>>> futures;
+    std::vector<std::future<std::optional<PrimeFactors<T>>>> futures;
 
     // const T chunk_size = Modulus * block_size;
     const T diff = upper_bound - lower_bound;
@@ -381,7 +382,7 @@ TrialDivisionMT(
         ));
     }
 
-    std::optional<std::pair<T, T>> result;
+    std::optional<PrimeFactors<T>> result;
     for (auto& fut : futures) {
         auto res = fut.get();
         if (res) {
@@ -397,7 +398,7 @@ TrialDivisionMT(
 
 // Worker function for TrialDivisionRandomMT
 template <typename T>
-std::optional<std::pair<T, T>>
+std::optional<PrimeFactors<T>>
 TrialDivisionRandomMTWorker(
     const T& N,
     const T& LowerBound,
@@ -448,7 +449,7 @@ TrialDivisionRandomMTWorker(
 }
 
 template <typename T>
-const std::optional<std::pair<T, T>>
+const std::optional<PrimeFactors<T>>
 TrialDivisionRandomMT(
     const T& N,
     const size_t Threads,
@@ -465,7 +466,7 @@ TrialDivisionRandomMT(
     const size_t block_size = RoundBlockSizeToModulus(BlockSize ? BlockSize : DefaultBlockSize, Modulus);
 
     std::atomic<bool> found{false};
-    std::vector<std::future<std::optional<std::pair<T, T>>>> futures;
+    std::vector<std::future<std::optional<PrimeFactors<T>>>> futures;
 
     // Get bounds and bits
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
@@ -500,7 +501,7 @@ TrialDivisionRandomMT(
         ));
     }
 
-    std::optional<std::pair<T, T>> result;
+    std::optional<PrimeFactors<T>> result;
     for (auto& fut : futures) {
         auto res = fut.get();
         if (res) {
@@ -512,7 +513,7 @@ TrialDivisionRandomMT(
     return result;
 }
 
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 TrialDivisionRandom(
     const mpz_class& N,
     const bool GuessSize = true,
@@ -524,14 +525,14 @@ TrialDivisionRandom(
     const size_t MaxIterations = std::numeric_limits<size_t>::max()
 );
 
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 TrialDivisionSimd(
     const mpz_class& N,
     const size_t MaxIterations
 );
 
 template <typename T>
-inline std::optional<std::pair<mpz_class, mpz_class>>
+inline std::optional<PrimeFactors<T>>
 TrialDivisionLinear(const T& N, const size_t Base, const size_t MaxIterations) {
     return TrialDivisionWheel510510<T>(N, MaxIterations);
 }

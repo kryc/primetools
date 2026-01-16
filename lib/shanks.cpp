@@ -3,12 +3,14 @@
 #include <limits>    // For std::numeric_limits
 
 #include "gmpxx.h"
+
+#include "factors.hpp"
 #include "shanks.hpp"
 #include "util.hpp"
 
 namespace primetools {
 
-std::optional<std::pair<mpz_class, mpz_class>>
+std::optional<PrimeFactors<mpz_class>>
 SQUFOF(
     const mpz_class& N,
     const size_t Max
@@ -23,7 +25,7 @@ SQUFOF(
     mpz_class Q_curr = N - P0 * P0; // Q_i in the forward sequence, starts as Q_1
 
     if (Q_curr == 0) { // N = P0^2, should have been caught by mpz_perfect_square_p. Defensive.
-        return {{P0, P0}};
+        return PrimeFactors<mpz_class>::FromPair(P0, P0);
     }
 
     for (size_t fwd_iter_count = 0; fwd_iter_count < Max; ++fwd_iter_count) {
@@ -58,7 +60,7 @@ SQUFOF(
                     if (P_prime_curr_val == P_prime_prev) { // Termination condition for reduction
                         mpz_class factor = gcd(P_prime_curr_val, N);
                         if (factor > 1 && factor < N) {
-                            return {{factor, N / factor}}; // Factor found!
+                            return PrimeFactors<mpz_class>::FromPair(factor, N / factor); // Factor found!
                         }
                         // Trivial factor (1 or N), this S failed. Break reduction.
                         break; 

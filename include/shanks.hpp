@@ -5,9 +5,13 @@
 #include <optional>
 #include <utility>
 
+#include <gmpxx.h>
+
+#include "factors.hpp"
+
 namespace primetools {
 
-std::optional<std::pair<mpz_class, mpz_class>>
+std::optional<PrimeFactors<mpz_class>>
 SQUFOF(
     const mpz_class& N,
     const size_t Max = std::numeric_limits<size_t>::max()

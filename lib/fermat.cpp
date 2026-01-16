@@ -6,6 +6,9 @@
 #include <iostream>
 #include <map>
 
+#include <gmpxx.h>
+
+#include "factors.hpp"
 #include "util.hpp"
 
 namespace primetools {
@@ -23,7 +26,7 @@ CalculateFermatIterations(
     return static_cast<size_t>(root4.get_ui()) + 1;
 }
 
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 FermatFactorisation(
     const mpz_class& N,
     const size_t Offset,
@@ -42,7 +45,9 @@ FermatFactorisation(
         b = (a * a) - N;
 
         if (mpz_perfect_square_p(b.get_mpz_t())) {
-            return std::make_pair(a - sqrt(b), a + sqrt(b));
+            return PrimeFactors<mpz_class>::FromPair(
+                a - sqrt(b), a + sqrt(b)
+            );
         }
 
         a++;
@@ -51,7 +56,7 @@ FermatFactorisation(
     return std::nullopt;
 }
 
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 FermatFactorisationAlgorithm2(
     const mpz_class& N,
     const size_t Max
@@ -70,7 +75,7 @@ FermatFactorisationAlgorithm2(
         if (r == 0) {
             mpz_class p = (u - v) / 2;
             mpz_class q = (u + v) / 2;
-            return std::make_pair(p, q);
+            return PrimeFactors<mpz_class>::FromPair(p, q);
         }
         else if (r > 0) {
             v += 2;
@@ -88,7 +93,7 @@ FermatFactorisationAlgorithm2(
  * "A New Modified Integer Factorization Algorithm using Integer Modulo 20's Technique"
  * https://ieeexplore.ieee.org/document/6978214
  */
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 ModifiedFermatFactorisation4(
     const mpz_class& N,
     const size_t Max
@@ -117,7 +122,9 @@ ModifiedFermatFactorisation4(
     while (mpz_fdiv_ui(x.get_mpz_t(), 10) != 0) {
         mpz_class b = (x * x) - N;
         if (mpz_perfect_square_p(b.get_mpz_t())) {
-            return std::make_pair(x - sqrt(b), x + sqrt(b));
+            return PrimeFactors<mpz_class>::FromPair(
+                x - sqrt(b), x + sqrt(b)
+            );
         }
         x++;
     }
@@ -133,7 +140,7 @@ ModifiedFermatFactorisation4(
             if (mpz_perfect_square_p(y.get_mpz_t())) {
                 mpz_class p = x - sqrt(y);
                 mpz_class q = x + sqrt(y);
-                return std::make_pair(p, q);
+                return PrimeFactors<mpz_class>::FromPair(p, q);
             }
         }
         x++;
@@ -151,7 +158,7 @@ ModifiedFermatFactorisation4(
  * value of 𝑛 𝑚𝑜𝑑 20, the possible values of u, PS(𝑢2 − 𝑛) = True,
  * can be determined initially.
  */
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 FMMod20Precomp(
     const mpz_class& N,
     const size_t Max
@@ -179,7 +186,9 @@ FMMod20Precomp(
     while (mpz_fdiv_ui(u.get_mpz_t(), 10) != 0) {
         mpz_class b = (u * u) - N;
         if (mpz_perfect_square_p(b.get_mpz_t())) {
-            return std::make_pair(u - sqrt(b), u + sqrt(b));
+            return PrimeFactors<mpz_class>::FromPair(
+                u - sqrt(b), u + sqrt(b)
+            );
         }
         u++;
     }
@@ -193,7 +202,9 @@ FMMod20Precomp(
         primetools::increment(u, gaps & 0xf);
         const mpz_class b = (u * u) - N;
         if (mpz_perfect_square_p(b.get_mpz_t())) {
-            return std::make_pair(u - sqrt(b), u + sqrt(b));
+            return PrimeFactors<mpz_class>::FromPair(
+                u - sqrt(b), u + sqrt(b)
+            );
         }
         // Rotate the gaps
         gaps = std::rotr(gaps, 4);

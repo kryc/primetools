@@ -7,17 +7,18 @@
 #include <gmpxx.h>
 
 #include "factorise.hpp"
+#include "factors.hpp"
 #include "prime.hpp"
 #include "util.hpp"
 
 template <typename T>
 void
 OutputFactors(
-    const std::optional<std::pair<T, T>>& Factors
+    const std::optional<primetools::PrimeFactors<T>>& Factors
 )
 {
     if (Factors) {
-        std::cout << Factors->first << ", " << Factors->second << std::endl;
+        std::cout << Factors->GetString() << std::endl;
     } else {
         std::cout << "No factors found" << std::endl;
     }

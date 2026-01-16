@@ -11,11 +11,12 @@
 #include "factorise.hpp"
 #include "fermat.hpp"
 #include "pollard.hpp"
+#include "factors.hpp"
 #include "trial_division.hpp"
 
 namespace primetools {
 
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 FactorisePerfectSquare(
     const mpz_class& N
 )
@@ -26,14 +27,14 @@ FactorisePerfectSquare(
 
     if (mpz_perfect_square_p(N.get_mpz_t())) {
         mpz_class sqrtN = sqrt(N);
-        return std::make_pair(sqrtN, sqrtN);
+        return PrimeFactors<mpz_class>::FromPair(sqrtN, sqrtN);
     }
 
     return std::nullopt;
 }
 
 // Factorise against next _Count_ primes
-const std::optional<std::pair<mpz_class, mpz_class>>
+const std::optional<PrimeFactors<mpz_class>>
 FactorisePrimesInRange(
     const mpz_class& N,
     const mpz_class& Start,
@@ -53,7 +54,7 @@ FactorisePrimesInRange(
 
     while (prime <= End) {
         if (mpz_divisible_p(N.get_mpz_t(), prime.get_mpz_t())) {
-            return std::make_pair(prime, N / prime);
+            return PrimeFactors<mpz_class>::FromPair(prime, N / prime);
         }
         mpz_nextprime(prime.get_mpz_t(), prime.get_mpz_t());
     }

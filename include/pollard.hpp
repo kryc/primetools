@@ -5,6 +5,9 @@
 #include <optional>
 #include <utility>
 
+#include <gmpxx.h>
+
+#include "factors.hpp"
 #include "util.hpp"
 
 namespace primetools {
@@ -30,7 +33,7 @@ PollardsRhoPolynomial2(
     const mpz_class& N
 );
 
-std::optional<std::pair<mpz_class, mpz_class>>
+std::optional<PrimeFactors<mpz_class>>
 PollardsRho(
     const mpz_class N,
     const std::function<mpz_class(mpz_class, mpz_class)> Polynomial = PollardsRhoPolynomial2,
@@ -38,7 +41,7 @@ PollardsRho(
     const size_t Max = std::numeric_limits<size_t>::max()
 );
 
-std::optional<std::pair<mpz_class, mpz_class>>
+std::optional<PrimeFactors<mpz_class>>
 BrentPollardsRho(
     const mpz_class N,
     const size_t M = DefaultM,
@@ -46,7 +49,7 @@ BrentPollardsRho(
     const size_t Max = std::numeric_limits<size_t>::max()
 );
 
-std::optional<std::pair<mpz_class, mpz_class>>
+std::optional<PrimeFactors<mpz_class>>
 PollardsPMinus1(
     const mpz_class& N,
     const size_t B = (size_t)1 << 20,

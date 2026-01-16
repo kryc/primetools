@@ -28,7 +28,7 @@ PollardsRhoPolynomial2(
     return (x * x + 1) % N;
 }
 
-std::optional<std::pair<mpz_class, mpz_class>>
+std::optional<PrimeFactors<mpz_class>>
 PollardsRho(
     const mpz_class N,
     const std::function<mpz_class(mpz_class, mpz_class)> Polynomial,
@@ -48,14 +48,14 @@ PollardsRho(
         d = primetools::gcd(z, N);
 
         if (d > 1 && d < N) {
-            return std::make_pair(d, N / d);
+            return PrimeFactors<mpz_class>::FromPair(d, N / d);
         }
     }
 
     return std::nullopt;
 }
 
-std::optional<std::pair<mpz_class, mpz_class>>
+std::optional<PrimeFactors<mpz_class>>
 BrentPollardsRho(
     const mpz_class N,
     const size_t M,
@@ -105,7 +105,7 @@ BrentPollardsRho(
     }
 
     if (d > 1 && d < N) {
-        return std::make_pair(d, N / d);
+        return PrimeFactors<mpz_class>::FromPair(d, N / d);
     }
 
     return std::nullopt;
@@ -117,7 +117,7 @@ BrentPollardsRho(
  * is effective when one of the factors consists only of
  * the product of small primes.
  */
-std::optional<std::pair<mpz_class, mpz_class>>
+std::optional<PrimeFactors<mpz_class>>
 PollardsPMinus1(
     const mpz_class& N,
     const size_t B,
@@ -145,7 +145,7 @@ PollardsPMinus1(
             a = primetools::modexp(a, exp, N);
             d = primetools::gcd(a - 1, N);
             if (d > 1 && d < N) {
-                return std::make_pair(d, N / d);
+                return PrimeFactors<mpz_class>::FromPair(d, N / d);
             }
             p = primegen.Next();
         }
