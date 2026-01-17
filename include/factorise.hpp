@@ -96,14 +96,27 @@ Factorise(
 
     // Try using Pollards P-1
     Log("Trying Pollard's P-1...", Verbose);
-    resultpair = PollardsPMinus1MT(remainder, threads, PMinus1DefaultB, 16);
-    if (resultpair) {
-        // If either factor is prime, add it to the factors
-        if (primetools::isprime(resultpair->first)) {
-            factors.AddFactor(resultpair->first);
-        }
-        if (primetools::isprime(resultpair->second)) {
-            factors.AddFactor(resultpair->second);
+    for (;;) {
+        resultpair = PollardsPMinus1MT(remainder, threads);
+        if (resultpair) {
+            // If either factor is prime, add it to the factors
+            if (primetools::isprime(resultpair->first)) {
+                factors.AddFactor(resultpair->first);
+            }
+            if (primetools::isprime(resultpair->second)) {
+                factors.AddFactor(resultpair->second);
+            }
+
+            remainder = N / factors.Product();
+            if (primetools::isprime(remainder)) {
+                factors.AddFactor(remainder);
+                return factors;
+            } else if (remainder == 1) {
+                return factors;
+            }
+            Log("Current factors: " + factors.GetString(), Verbose);
+        } else {
+            break;
         }
     }
 
@@ -120,15 +133,28 @@ Factorise(
 
     // Use Pollard's rho algorithm
     Log("Trying Brent-Pollard's rho...", Verbose);
-    resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, (size_t)(1) << 4);
-    if (resultpair) {
-        // If either factor is prime, add it to the factors
-        if (primetools::isprime(resultpair->first)) {
-            factors.AddFactor(resultpair->first);
-        }
-        if (primetools::isprime(resultpair->second)) {
-            factors.AddFactor(resultpair->second);
-        }
+    for (;;) {
+        resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, (size_t)(1) << 4);
+        if (resultpair) {
+            // If either factor is prime, add it to the factors
+            if (primetools::isprime(resultpair->first)) {
+                factors.AddFactor(resultpair->first);
+            }
+            if (primetools::isprime(resultpair->second)) {
+                factors.AddFactor(resultpair->second);
+            }
+
+            remainder = N / factors.Product();
+            if (primetools::isprime(remainder)) {
+                factors.AddFactor(remainder);
+                return factors;
+            } else if (remainder == 1) {
+                return factors;
+            }
+            Log("Current factors: " + factors.GetString(), Verbose);
+        } else {
+            break;
+        }        
     }
 
     // Fall back to trial division if still not fully factored
