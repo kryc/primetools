@@ -42,8 +42,7 @@ target_include_directories(libprimetools PRIVATE
                                 ${CMAKE_CURRENT_SOURCE_DIR}/lib/
                                 ${CMAKE_CURRENT_SOURCE_DIR}/include/)
 
-file(GLOB_RECURSE PRIMETOOLS_SOURCES
-                            ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+SET(PRIMETOOLS_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/primetools.cpp)
 add_executable(primetools ${PRIMETOOLS_SOURCES})
 target_include_directories(primetools PRIVATE
                             ${CMAKE_CURRENT_SOURCE_DIR}/src/
