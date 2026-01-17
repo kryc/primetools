@@ -84,7 +84,10 @@ Factorise(
     }
 
     remainder = N / factors.Product();
-    if (remainder == 1) {
+    if (primetools::isprime(remainder)) {
+        factors.AddFactor(remainder);
+        return factors;
+    } else if (remainder == 1) {
         return factors;
     }
 
@@ -92,8 +95,8 @@ Factorise(
     Log("Remainder after FMMod20Precomp: " + remainder.get_str(), Verbose);
 
     // Try using Pollards P-1
-    Log("Trying Pollard's P-1 (B2**32)...", Verbose);
-    resultpair = PollardsPMinus1(remainder, (size_t)1 << 22, 100);
+    Log("Trying Pollard's P-1...", Verbose);
+    resultpair = PollardsPMinus1MT(remainder, threads, PMinus1DefaultB, 16);
     if (resultpair) {
         // If either factor is prime, add it to the factors
         if (primetools::isprime(resultpair->first)) {
@@ -105,7 +108,10 @@ Factorise(
     }
 
     remainder = N / factors.Product();
-    if (remainder == 1) {
+    if (primetools::isprime(remainder)) {
+        factors.AddFactor(remainder);
+        return factors;
+    } else if (remainder == 1) {
         return factors;
     }
 
@@ -114,7 +120,7 @@ Factorise(
 
     // Use Pollard's rho algorithm
     Log("Trying Brent-Pollard's rho...", Verbose);
-    resultpair = BrentPollardsRho(remainder);
+    resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, (size_t)(1) << 4);
     if (resultpair) {
         // If either factor is prime, add it to the factors
         if (primetools::isprime(resultpair->first)) {
@@ -127,7 +133,10 @@ Factorise(
 
     // Fall back to trial division if still not fully factored
     remainder = N / factors.Product();
-    if (remainder == 1) {
+    if (primetools::isprime(remainder)) {
+        factors.AddFactor(remainder);
+        return factors;
+    } else if (remainder == 1) {
         return factors;
     }
 
@@ -136,7 +145,7 @@ Factorise(
 
     Log("Falling back to trial division...", Verbose);
     T last_finish = (modulus * threads);
-    modulus = 699690;
+    modulus = 9699690;
     result = TrialDivision(remainder, threads, 0, false, 0, last_finish, T(0), modulus);
     if (result) {
         factors.Update(result.value());

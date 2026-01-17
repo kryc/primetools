@@ -22,11 +22,10 @@ TEST(Fermat, StandardFermat)
         const mpz_class q = testCase[1];
         const mpz_class N = p * q;
 
-        const auto factors = primetools::FermatFactorisation(N, 0, std::numeric_limits<size_t>::max());
+        const auto factors = primetools::FermatFactorisationAlgorithm1(N, 0, std::numeric_limits<size_t>::max());
         ASSERT_TRUE(factors.has_value());
-        EXPECT_EQ(factors->Count(), 2);
-        EXPECT_TRUE(factors->HasFactor(p));
-        EXPECT_TRUE(factors->HasFactor(q));
+        EXPECT_TRUE(factors->first == p || factors->first == q);
+        EXPECT_TRUE(factors->second == p || factors->second == q);
     }
 }
 
@@ -39,9 +38,8 @@ TEST(Fermat, FermatFactorisationAlgorithm2)
 
         const auto factors = primetools::FermatFactorisationAlgorithm2(N, std::numeric_limits<size_t>::max());
         ASSERT_TRUE(factors.has_value());
-        EXPECT_EQ(factors->Count(), 2);
-        EXPECT_TRUE(factors->HasFactor(p));
-        EXPECT_TRUE(factors->HasFactor(q));
+        EXPECT_TRUE(factors->first == p || factors->first == q);
+        EXPECT_TRUE(factors->second == p || factors->second == q);
     }
 }
 
@@ -54,9 +52,8 @@ TEST(Fermat, ModifiedFermatFactorisation4)
 
         const auto factors = primetools::ModifiedFermatFactorisation4(N, std::numeric_limits<size_t>::max());
         ASSERT_TRUE(factors.has_value());
-        EXPECT_EQ(factors->Count(), 2);
-        EXPECT_TRUE(factors->HasFactor(p));
-        EXPECT_TRUE(factors->HasFactor(q));
+        EXPECT_TRUE(factors->first == p || factors->first == q);
+        EXPECT_TRUE(factors->second == p || factors->second == q);
     }
 }
 
@@ -80,8 +77,7 @@ TEST(Fermat, FMod20Precomp)
 
         const auto factors = primetools::FMMod20Precomp(N, std::numeric_limits<size_t>::max());
         ASSERT_TRUE(factors.has_value());
-        EXPECT_EQ(factors->Count(), 2);
-        EXPECT_TRUE(factors->HasFactor(p));
-        EXPECT_TRUE(factors->HasFactor(q));
+        EXPECT_TRUE(factors->first == p || factors->first == q);
+        EXPECT_TRUE(factors->second == p || factors->second == q);
     }
 }
