@@ -55,7 +55,7 @@ Factorise(
     // Check for small prime factors
     Log("Checking small primes...", Verbose);
     size_t modulus = 510510;
-    result = TrialDivision(N, 0, 0, false, 0, T(0), T(modulus * threads), modulus);
+    result = TrialDivision(N, 0, 0, false, 0, T(0), T(modulus * threads), modulus, Verbose);
     if (result) {
         factors = result.value();
     }

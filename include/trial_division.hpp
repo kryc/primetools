@@ -244,7 +244,8 @@ TrialDivisionLinear(
     const size_t Bits = 0,
     const T RangeLower = 0,
     const T RangeUpper = 0,
-    const bool Simd = false
+    const bool Simd = false,
+    const bool Status = false
 )
 {
     if (N < 2) {
@@ -257,8 +258,11 @@ TrialDivisionLinear(
     if (GuessSize) {
         std::cout << "Trying factorization of " << bits << "-bit primes using wheel" << Modulus << " factorization." << std::endl;
     }
-    // std::cout << "Searching primes in range [" << lower_bound << ", " << upper_bound <<
-    //     "] using wheel" << Modulus << " factorization." << std::endl;
+
+    if (Status) {
+        std::cout << "Searching primes in range [" << lower_bound << ", " << upper_bound <<
+            "] using wheel" << Modulus << " factorization." << std::endl;
+    }
 
     // if (Simd) {
     //     return TrialDivisionRangeSimd<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack>(N, lower_bound, upper_bound, WHEEL510510GAPS);
@@ -339,7 +343,8 @@ TrialDivisionMTWorker(
     const size_t Modulus,
     std::atomic<bool>& Found,
     T& CurrentChunk,
-    std::mutex& StatusMutex
+    std::mutex& StatusMutex,
+    const bool Status = false
 ) {
     T thread_start = LowerBound + (ThreadId * ChunkSize);
     T thread_end = thread_start + ChunkSize;
@@ -350,10 +355,13 @@ TrialDivisionMTWorker(
             if (chunk_index > CurrentChunk) {
                 CurrentChunk = chunk_index;
             }
-            std::cout << '\r' << "Chunk " << CurrentChunk <<
-            " (" << thread_start << " to " << thread_end << ")" <<
-            " of " << Chunks << " (" <<
-                (CurrentChunk * 100) / Chunks << "%) " << std::flush;
+            if (Status)
+            {
+                std::cout << '\r' << "Chunk " << CurrentChunk <<
+                " (" << thread_start << " to " << thread_end << ")" <<
+                " of " << Chunks << " (" <<
+                    (CurrentChunk * 100) / Chunks << "%) " << std::flush;
+            }
         }
         // Make a thread-local copy of Factors and Remainder to avoid contention
         PrimeFactors<T> thread_factors;
@@ -393,7 +401,8 @@ TrialDivisionMT(
     const size_t Bits,
     const T& RangeLower,
     const T& RangeUpper,
-    const size_t Modulus
+    const size_t Modulus,
+    const bool Status = false
 )
 {
     // Use hardware concurrency if Threads == 0
@@ -410,8 +419,11 @@ TrialDivisionMT(
     const T diff = upper_bound - lower_bound;
     const T chunks = (diff / block_size);
 
-    std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber<T>(lower_bound) << ", " << primetools::TruncateNumber<T>(upper_bound) <<
+    if (Status)
+    {
+        std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber<T>(lower_bound) << ", " << primetools::TruncateNumber<T>(upper_bound) <<
             "] using modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
+    }
 
     T current_chunk = 0;
 
@@ -431,7 +443,8 @@ TrialDivisionMT(
             Modulus,
             std::ref(found),
             std::ref(current_chunk),
-            std::ref(status_mutex)
+            std::ref(status_mutex),
+            Status
         ));
     }
 
@@ -593,14 +606,15 @@ TrialDivision(
     const size_t Bits = 0,
     const T& RangeLower = 0,
     const T& RangeUpper = 0,
-    const size_t Modulus = 510510
+    const size_t Modulus = 510510,
+    const bool Status = false
 )
 {
     PrimeFactors<T> factors;
     T remainder = N;
     const size_t result = Threads > 1
-        ? TrialDivisionMT<T>(N, factors, remainder, Threads, BlockSize, GuessSize, Bits, RangeLower, RangeUpper, Modulus)
-        : TrialDivisionLinear<T>(N, factors, remainder, Modulus, GuessSize, Bits, RangeLower, RangeUpper, false);
+        ? TrialDivisionMT<T>(N, factors, remainder, Threads, BlockSize, GuessSize, Bits, RangeLower, RangeUpper, Modulus, Status)
+        : TrialDivisionLinear<T>(N, factors, remainder, Modulus, GuessSize, Bits, RangeLower, RangeUpper, false, Status);
 
     if (result > 0) {
         return factors;

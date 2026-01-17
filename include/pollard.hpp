@@ -25,7 +25,7 @@ namespace {
     // The deafult M is 64
     static const size_t DefaultM = 64;
 
-    static const size_t PMinus1DefaultB = (size_t)(1) << 20;
+    static const size_t PMinus1DefaultB = (size_t)(1) << 22;
     static const size_t PMinus1DefaultBases = 16ULL;
 }
 
