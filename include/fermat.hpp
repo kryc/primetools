@@ -39,7 +39,7 @@ CalculateFermatIterations(
 
 template <typename T>
 const std::optional<std::pair<T, T>>
-FermatFactorisation(
+FermatFactorisationAlgorithm1(
     const T& N,
     const size_t Offset,
     const size_t Max = std::numeric_limits<size_t>::max()
@@ -227,6 +227,50 @@ FMMod20Precomp(
     }
 
     return std::nullopt;
+}
+
+// Public interface to factorise a number N
+template <typename T>
+const std::optional<PrimeFactors<T>>
+FermatFactorisation(
+    const T& N,
+    const FermatAlgorithm Algorithm,
+    const size_t Offset,
+    const size_t Max = std::numeric_limits<size_t>::max()
+)
+{
+    switch (Algorithm) {
+        case AlgFermat: {
+            auto result = FermatFactorisationAlgorithm1(N, Offset, Max);
+            if (result) {
+                return PrimeFactors<T>::FromPair(result.value());
+            }
+            return std::nullopt;
+        }
+        case AlgFermat2: {
+            auto result = FermatFactorisationAlgorithm2(N, Max);
+            if (result) {
+                return PrimeFactors<T>::FromPair(result->first, result->second);
+            }
+            return std::nullopt;
+        }
+        case AlgModifiedFermatV4: {
+            auto result = ModifiedFermatFactorisation4(N, Max);
+            if (result) {
+                return PrimeFactors<T>::FromPair(result->first, result->second);
+            }
+            return std::nullopt;
+        }
+        case AlgFMMod20Precomp: {
+            auto result = FMMod20Precomp(N, Max);
+            if (result) {
+                return PrimeFactors<T>::FromPair(result->first, result->second);
+            }
+            return std::nullopt;
+        }
+        default:
+            return std::nullopt;
+    }
 }
 
 } // namespace primetools
