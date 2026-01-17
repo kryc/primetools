@@ -77,7 +77,7 @@ int main(
 
     if (action == "factorise" || action == "factorize")
     {
-        if (argc != 3) {
+        if (argc < 3) {
             std::cerr << "Usage: " << argv[0] << " factorise <number>" << std::endl;
             return 1;
         }
@@ -88,8 +88,9 @@ int main(
         }
 
         const mpz_class n(positionals[1].data());
+        const bool quiet = flags.find("quiet") != flags.end();
 
-        auto result = primetools::Factorise(n);
+        auto result = primetools::Factorise(n, 0, !quiet);
         OutputFactors(result);
     }
     else if (action == "fermat")
