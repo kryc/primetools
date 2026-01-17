@@ -52,6 +52,13 @@ public:
         return pf;
     }
 
+    static PrimeFactors<T>
+    FromPair(
+        const std::pair<T, T>& Pair
+    ) {
+        return FromPair(Pair.first, Pair.second);
+    }
+
     bool HasFactor(
         const T& Factor
     ) const {

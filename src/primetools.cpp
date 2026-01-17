@@ -2,6 +2,7 @@
 #include <limits>
 #include <map>
 #include <string>
+#include <string_view>
 
 #include <stdint.h>
 #include <gmpxx.h>
@@ -24,6 +25,19 @@ OutputFactors(
     }
 }
 
+template <typename T>
+void
+OutputFactors(
+    const std::optional<std::pair<T, T>>& Factors
+)
+{
+    if (Factors) {
+        std::cout << Factors->first << " * " << Factors->second << std::endl;
+    } else {
+        std::cout << "No factors found" << std::endl;
+    }
+}
+
 int main(
     int argc,
     char* argv[]
@@ -34,19 +48,19 @@ int main(
         return 1;
     }
 
-    std::map<std::string, std::string> flags;
-    std::vector<std::string> positionals;
+    std::map<std::string_view, std::string_view> flags;
+    std::vector<std::string_view> positionals;
 
     for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
+        std::string_view arg = argv[i];
         if (arg.rfind("--", 0) == 0) {
             size_t eq_pos = arg.find('=');
             if (eq_pos != std::string::npos) {
-                std::string key = arg.substr(2, eq_pos - 2);
-                std::string value = arg.substr(eq_pos + 1);
+                std::string_view key = arg.substr(2, eq_pos - 2);
+                std::string_view value = arg.substr(eq_pos + 1);
                 flags[key] = value;
             } else {
-                std::string key = arg.substr(2);
+                std::string_view key = arg.substr(2);
                 flags[key] = "true";
             }
         } else {
@@ -59,7 +73,7 @@ int main(
         return 1;
     }
 
-    const std::string action = positionals[0];
+    const std::string_view action = positionals[0];
 
     if (action == "factorise" || action == "factorize")
     {
@@ -73,7 +87,7 @@ int main(
             return 1;
         }
 
-        const mpz_class n(positionals[1]);
+        const mpz_class n(positionals[1].data());
 
         auto result = primetools::Factorise(n);
         OutputFactors(result);
@@ -90,32 +104,16 @@ int main(
             return 1;
         }
 
-        const mpz_class n(positionals[1]);
-        const size_t max = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
-        const bool fermat = flags.find("fermat") != flags.end() || flags.find("ffa") != flags.end();
-        const bool mffv2 = flags.find("mffv2") != flags.end();
-        const bool mffv4 = flags.find("mffv4") != flags.end();
+        const mpz_class n(positionals[1].data());
+        const size_t max = flags.find("max-iterations") != flags.end() ? std::stoul(std::string(flags["max-iterations"])) : std::numeric_limits<size_t>::max();
+        const std::string_view algorithm_str = flags.find("algorithm") != flags.end() ? flags["algorithm"] : "fermat";
 
-        if (fermat) {
-            std::cout << "Using standard Fermat factorization of " << primetools::TruncateNumber(n) << std::endl;
-            auto result = primetools::FermatFactorisation(n, 0, max);
-            OutputFactors(result);
-        }
-        else if (mffv2) {
-            std::cout << "Using Fermat Factorization Algorithm 2 of " << primetools::TruncateNumber(n) << std::endl;
-            auto result = primetools::FermatFactorisationAlgorithm2(n, max);
-            OutputFactors(result);
-        }
-        else if (mffv4) {
-            std::cout << "Using Modified Fermat Factorization V4 of " << primetools::TruncateNumber(n) << std::endl;
-            auto result = primetools::ModifiedFermatFactorisation4(n, max);
-            OutputFactors(result);
-        }
-        else {
-            std::cout << "Using FMMod20Precomp of " << primetools::TruncateNumber(n) << std::endl;
-            auto result = primetools::FMMod20Precomp(n, max);
-            OutputFactors(result);
-        }
+        // Parse the algorithm flag
+        const primetools::FermatAlgorithm algorithm = primetools::GetFermatAlgorithmFromString(algorithm_str);
+
+        std::cout << "Using " << primetools::FermatAlgorithmToString(algorithm) << " factorization of " << primetools::TruncateNumber(n) << std::endl;
+        auto result = primetools::Fermat(n, algorithm, 0, max);
+        OutputFactors(result);
     }
     else if (action == "rho")
     {
@@ -129,7 +127,7 @@ int main(
             return 1;
         }
 
-        const mpz_class n(positionals[1]);
+        const mpz_class n(positionals[1].data());
         const bool pollard = flags.find("pollard") != flags.end();
 
         if (pollard) {
@@ -155,9 +153,9 @@ int main(
             return 1;
         }
 
-        const mpz_class n(positionals[1]);
-        const size_t bound = flags.find("bound") != flags.end() ? std::stoul(flags["bound"]) : std::powl(2, 32);
-        const size_t bases = flags.find("bases") != flags.end() ? std::stoul(flags["bases"]) : 1'000'000;
+        const mpz_class n(positionals[1].data());
+        const size_t bound = flags.find("bound") != flags.end() ? std::stoul(std::string(flags["bound"])) : std::powl(2, 32);
+        const size_t bases = flags.find("bases") != flags.end() ? std::stoul(std::string(flags["bases"])) : 1'000'000;
         auto result = primetools::PollardsPMinus1(n, bound, bases);
         OutputFactors(result);
     }
@@ -173,7 +171,7 @@ int main(
             return 1;
         }
 
-        const mpz_class n(positionals[1]);
+        const mpz_class n(positionals[1].data());
         auto result = primetools::SQUFOF(n);
         OutputFactors(result);
     }
@@ -192,18 +190,18 @@ int main(
         // Check if the user specified a modulus
         size_t modulus = 510510; // Default to 510510
         if (flags.find("modulus") != flags.end() || flags.find("wheel") != flags.end()) {
-            modulus = flags.find("modulus") != flags.end() ? std::stoul(flags["modulus"]) : std::stoul(flags["wheel"]);
+            modulus = flags.find("modulus") != flags.end() ? std::stoul(std::string(flags["modulus"])) : std::stoul(std::string(flags["wheel"]));
         }
 
-        const mpz_class n(positionals[1]);
-        const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"]) : mpz_class(1);
-        const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"]) : mpz_class(0);
+        const mpz_class n(positionals[1].data());
+        const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"].data()) : mpz_class(1);
+        const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"].data()) : mpz_class(0);
         const bool noguess = flags.find("no-guess") != flags.end();
-        const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
-        const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
-        const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(flags["blocksize"]) : 0;
-        const uint64_t seed = flags.find("seed") != flags.end() ? std::stoull(flags["seed"]) : 0;
-        const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
+        const size_t bits = flags.find("bits") != flags.end() ? std::stoul(std::string(flags["bits"])) : 0;
+        const size_t threads = flags.find("threads") != flags.end() ? std::stoul(std::string(flags["threads"])) : 1;
+        const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(std::string(flags["blocksize"])) : 0;
+        const uint64_t seed = flags.find("seed") != flags.end() ? std::stoull(std::string(flags["seed"])) : 0;
+        const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(std::string(flags["max-iterations"])) : std::numeric_limits<size_t>::max();
 
         std::cout << "Random prime factorization of " << primetools::TruncateNumber(n) << std::endl;
 
@@ -226,17 +224,17 @@ int main(
         // Check if the user specified a modulus
         size_t modulus = 510510; // Default to 510510
         if (flags.find("modulus") != flags.end() || flags.find("wheel") != flags.end()) {
-            modulus = flags.find("modulus") != flags.end() ? std::stoul(flags["modulus"]) : std::stoul(flags["wheel"]);
+            modulus = flags.find("modulus") != flags.end() ? std::stoul(std::string(flags["modulus"])) : std::stoul(std::string(flags["wheel"]));
         }
 
-        const mpz_class n(positionals[1]);
-        const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"]) : mpz_class(0);
-        const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"]) : mpz_class(0);
+        const mpz_class n(positionals[1].data());
+        const mpz_class start = flags.find("start") != flags.end() ? mpz_class(flags["start"].data()) : mpz_class(0);
+        const mpz_class end = flags.find("end") != flags.end() ? mpz_class(flags["end"].data()) : mpz_class(0);
         const bool noguess = flags.find("no-guess") != flags.end();
-        const size_t bits = flags.find("bits") != flags.end() ? std::stoul(flags["bits"]) : 0;
+        const size_t bits = flags.find("bits") != flags.end() ? std::stoul(std::string(flags["bits"])) : 0;
         // const bool simd = flags.find("simd") != flags.end() || flags.find("use-simd") != flags.end();
-        const size_t threads = flags.find("threads") != flags.end() ? std::stoul(flags["threads"]) : 1;
-        const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(flags["blocksize"]) : 0;
+        const size_t threads = flags.find("threads") != flags.end() ? std::stoul(std::string(flags["threads"])) : 1;
+        const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(std::string(flags["blocksize"])) : 0;
 
         /*if (simd) {
             const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(flags["max-iterations"]) : std::numeric_limits<size_t>::max();
@@ -284,7 +282,7 @@ int main(
             return 1;
         }
 
-        const mpz_class n(positionals[1]);
+        const mpz_class n(positionals[1].data());
 
         bool is_prime = primetools::isprime(n);
         std::cout << primetools::TruncateNumber(n) << (is_prime ? " is prime." : " is not prime.") << std::endl;
@@ -301,7 +299,7 @@ int main(
             return 1;
         }
 
-        const mpz_class n(positionals[1]);
+        const mpz_class n(positionals[1].data());
         size_t iterations = primetools::CalculateFermatIterations(n);
         std::cout << "Fermat iterations for " << primetools::TruncateNumber(n) << ": " << iterations << std::endl;
     }
@@ -321,7 +319,7 @@ int main(
             return 1;
         }
 
-        const uint64_t prime = std::stoull(positionals[1]);
+        const uint64_t prime = std::stoull(positionals[1].data());
         if (prime < 2) {
             std::cerr << "Error: Prime must be greater than 1." << std::endl;
             return 1;
@@ -342,7 +340,7 @@ int main(
             return 1;
         }
 
-        const size_t n = std::stoul(positionals[1]);
+        const size_t n = std::stoul(positionals[1].data());
         const mpz_class prime = primetools::GetNthPrime(n);
         std::cout << "The " << n << (n % 10 == 1 && n % 100 != 11 ? "st" : (n % 10 == 2 && n % 100 != 12 ? "nd" : (n % 10 == 3 && n % 100 != 13 ? "rd" : "th"))) << " prime is " << prime << std::endl;
     }
@@ -358,8 +356,8 @@ int main(
             return 1;
         }
 
-        const mpz_class start(positionals[1]);
-        const mpz_class end(positionals[2]);
+        const mpz_class start(positionals[1].data());
+        const mpz_class end(positionals[2].data());
 
         if (end < start) {
             std::cerr << "Error: End must be greater than or equal to start." << std::endl;

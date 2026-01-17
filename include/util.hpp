@@ -398,6 +398,47 @@ get_ui(
     return static_cast<uint64_t>(Value);
 }
 
+static inline
+const bool
+IsPerfectSquare(
+    const mpz_class& N
+)
+{
+    return mpz_perfect_square_p(N.get_mpz_t());
+}
+
+static inline
+const bool
+IsPerfectSquare(
+    const __uint128_t N
+)
+{
+    __uint128_t low = 0;
+    __uint128_t high = N;
+    while (low <= high) {
+        __uint128_t mid = low + (high - low) / 2;
+        __uint128_t mid_squared = mid * mid;
+        if (mid_squared == N) {
+            return true;
+        } else if (mid_squared < N) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return false;
+}
+
+static inline
+const bool
+IsPerfectSquare(
+    const uint64_t N
+)
+{
+    uint64_t root = static_cast<uint64_t>(std::sqrt(N));
+    return root * root == N || (root + 1) * (root + 1) == N;
+}
+
 } // namespace primetools
 
 #endif
