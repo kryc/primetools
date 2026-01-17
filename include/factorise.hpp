@@ -54,7 +54,7 @@ Factorise(
 
     // Check for small prime factors
     Log("Checking small primes...", Verbose);
-    size_t modulus = 9699690;
+    size_t modulus = 510510;
     result = TrialDivision(N, 0, 0, false, 0, T(0), T(modulus * threads), modulus);
     if (result) {
         factors = result.value();
@@ -135,7 +135,9 @@ Factorise(
     Log("Remainder after Brent-Pollard's rho: " + remainder.get_str(), Verbose);
 
     Log("Falling back to trial division...", Verbose);
-    result = TrialDivision(remainder, threads, 0, false, 0, T(modulus * threads), T(0), modulus);
+    T last_finish = (modulus * threads);
+    modulus = 699690;
+    result = TrialDivision(remainder, threads, 0, false, 0, last_finish, T(0), modulus);
     if (result) {
         factors.Update(result.value());
         return factors;

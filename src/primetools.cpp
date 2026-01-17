@@ -113,7 +113,7 @@ int main(
         const primetools::FermatAlgorithm algorithm = primetools::GetFermatAlgorithmFromString(algorithm_str);
 
         std::cout << "Using " << primetools::FermatAlgorithmToString(algorithm) << " factorization of " << primetools::TruncateNumber(n) << std::endl;
-        auto result = primetools::Fermat(n, algorithm, 0, max);
+        auto result = primetools::FermatFactorisation(n, algorithm, 0, max);
         OutputFactors(result);
     }
     else if (action == "rho")

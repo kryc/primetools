@@ -257,8 +257,8 @@ TrialDivisionLinear(
     if (GuessSize) {
         std::cout << "Trying factorization of " << bits << "-bit primes using wheel" << Modulus << " factorization." << std::endl;
     }
-    std::cout << "Searching primes in range [" << lower_bound << ", " << upper_bound <<
-        "] using wheel" << Modulus << " factorization." << std::endl;
+    // std::cout << "Searching primes in range [" << lower_bound << ", " << upper_bound <<
+    //     "] using wheel" << Modulus << " factorization." << std::endl;
 
     // if (Simd) {
     //     return TrialDivisionRangeSimd<T, 510510, 4, uint64_t, WHEEL510510GAP_COUNT, DensePack>(N, lower_bound, upper_bound, WHEEL510510GAPS);
@@ -467,11 +467,11 @@ TrialDivisionRandomMTWorker(
     const T thread_lower = LowerBound + (threads_chunks * ThreadID * ChunkSize);
     const T thread_upper = thread_lower + (threads_chunks * ChunkSize);
 
-    {
-        std::lock_guard<std::mutex> lock(StatusMutex);
-        std::cout << "Thread " << ThreadID << " searching in range [" << thread_lower << ", " <<
-            thread_upper << "] with " << threads_chunks << " chunks." << std::endl;
-    }
+    // {
+    //     std::lock_guard<std::mutex> lock(StatusMutex);
+    //     std::cout << "Thread " << ThreadID << " searching in range [" << thread_lower << ", " <<
+    //         thread_upper << "] with " << threads_chunks << " chunks." << std::endl;
+    // }
 
     // Initialize the PRNG
     MiniPRNG64 prng(ThreadID);
