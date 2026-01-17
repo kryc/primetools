@@ -12,6 +12,7 @@
 #include <gmpxx.h>
 
 #include "factors.hpp"
+#include "prime.hpp"
 #include "primegenerator.hpp"
 #include "util.hpp"
 
@@ -170,57 +171,41 @@ BrentPollardsRhoMT(
     return result;
 }
 
-
-// Precompute primes up to the stage-1 bound once.
-static inline std::vector<size_t>
-PMinus1PrimesUpTo(
-    const size_t bound
-)
-{
-    std::vector<size_t> primes;
-    primes.reserve(1u << 20);
-    PrimeGenerator<size_t> primegen;
-    for (size_t p = primegen.Next(); p <= bound; p = primegen.Next()) {
-        primes.push_back(p);
-    }
-    return primes;
-}
-
 template <typename T>
 static inline std::optional<std::pair<T, T>>
 PollardsPMinus1Stage1(
-    const T& n,
-    const size_t bound,
-    const size_t bases,
-    const std::vector<size_t>& primes,
-    const size_t base_offset = 0,
-    const size_t base_stride = 1,
-    std::atomic<bool>* stop = nullptr
+    const T& N,
+    const size_t Bound,
+    const size_t Bases,
+    const std::span<const uint64_t> Primes,
+    const size_t BaseOffset = 0,
+    const size_t BaseStride = 1,
+    std::atomic<bool>* Found = nullptr
 )
 {
-    for (size_t base_index = base_offset; base_index < bases; base_index += base_stride) {
-        if (stop && stop->load(std::memory_order_relaxed)) {
+    for (size_t base_index = BaseOffset; base_index < Bases; base_index += BaseStride) {
+        if (Found && Found->load(std::memory_order_relaxed)) {
             return std::nullopt;
         }
 
         // The base "a" does not need to be prime; it only needs to be coprime to n.
         T a = T(2) + base_index;
 
-        T d = primetools::gcd(a, n);
-        if (d > 1 && d < n) {
-            return std::make_pair(d, n / d);
+        T d = primetools::gcd(a, N);
+        if (d > 1 && d < N) {
+            return std::make_pair(d, N / d);
         }
 
-        for (const size_t p : primes) {
-            // Compute p^k <= bound (largest power of p not exceeding bound)
+        for (const size_t p : Primes) {
+            // Compute p^k <= Bound (largest power of p not exceeding Bound)
             size_t exp = p;
-            while (exp <= (bound / p)) {
+            while (exp <= (Bound / p)) {
                 exp *= p;
             }
-            a = primetools::modexp(a, mpz_class(exp), n);
-            d = primetools::gcd(a - 1, n);
-            if (d > 1 && d < n) {
-                return std::make_pair(d, n / d);
+            a = primetools::modexp(a, mpz_class(exp), N);
+            d = primetools::gcd(a - 1, N);
+            if (d > 1 && d < N) {
+                return std::make_pair(d, N / d);
             }
         }
     }
@@ -245,7 +230,7 @@ PollardsPMinus1(
     if (N < 2) {
         return std::nullopt;
     }
-    const auto primes = PMinus1PrimesUpTo(B);
+    const auto primes = GetPrimesTo(B);
     return PollardsPMinus1Stage1<T>(N, B, Bases, primes);
 
     return std::nullopt;
@@ -265,7 +250,7 @@ PollardsPMinus1MT(
     std::optional<std::pair<T, T>> result;
     std::mutex result_mutex;
     const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
-    const auto primes = PMinus1PrimesUpTo(B);
+    const auto primes = GetPrimesTo(B);
 
     for (size_t thread_id = 0; thread_id < num_threads; ++thread_id) {
         thread_pool.emplace_back([thread_id, num_threads, &result, &found, &result_mutex, &N, B, Bases, &primes]() {
@@ -274,9 +259,9 @@ PollardsPMinus1MT(
                 B,
                 Bases,
                 primes,
-                /*base_offset=*/thread_id,
-                /*base_stride=*/num_threads,
-                /*stop=*/&found
+                /*BaseOffset=*/thread_id,
+                /*BaseStride=*/num_threads,
+                /*Found=*/&found
             );
 
             if (thread_result) {
