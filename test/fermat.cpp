@@ -70,12 +70,42 @@ TEST(Fermat, FMod20Precomp)
         { { 154892299, 163950821 } }  // N mod 20 == 19
     };
 
+    constexpr size_t max_count = 65536*2;
+
     for (const auto& testCase : testCases) {
         const mpz_class p = testCase[0];
         const mpz_class q = testCase[1];
         const mpz_class N = p * q;
 
-        const auto factors = primetools::FMMod20Precomp(N, std::numeric_limits<size_t>::max());
+        const auto factors = primetools::FMMod20Precomp(N, max_count);
+        ASSERT_TRUE(factors.has_value());
+        EXPECT_TRUE(factors->first == p || factors->first == q);
+        EXPECT_TRUE(factors->second == p || factors->second == q);
+    }
+}
+
+TEST(Fermat, FMod20PrecompMT)
+{
+    std::vector<std::array<uint32_t, 2>> testCases = {
+        { { 151413473, 156367177 } }, // N mod 20 == 1
+        { { 239246351, 174550133 } }, // N mod 20 == 3
+        { { 240075973, 204127919 } }, // N mod 20 == 7
+        { { 145980617, 149979937 } }, // N mod 20 == 9
+        { { 183691033, 156659227 } }, // N mod 20 == 11
+        { { 206155219, 224283167 } }, // N mod 20 == 13
+        { { 211208359, 156869803 } }, // N mod 20 == 17
+        { { 154892299, 163950821 } }  // N mod 20 == 19
+    };
+
+    const size_t num_threads = std::thread::hardware_concurrency();
+    const size_t max_count = 1024;
+
+    for (const auto& testCase : testCases) {
+        const mpz_class p = testCase[0];
+        const mpz_class q = testCase[1];
+        const mpz_class N = p * q;
+
+        const auto factors = primetools::FMMod20PrecompMT(N, num_threads, max_count, 0);
         ASSERT_TRUE(factors.has_value());
         EXPECT_TRUE(factors->first == p || factors->first == q);
         EXPECT_TRUE(factors->second == p || factors->second == q);

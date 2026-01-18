@@ -70,9 +70,9 @@ Factorise(
 
     // Use Fermat's factorization method up to 2^24 iterations
     size_t iterations = CalculateFermatIterations(N);
-    iterations = std::min(iterations, (size_t)(1) << 24);
+    iterations = std::min(iterations, (size_t)8192*2);
     Log("Trying " + std::to_string(iterations) + " iterations of FMMod20Precomp (Fermat) factorization...", Verbose);
-    auto resultpair = FMMod20Precomp(remainder, iterations);
+    auto resultpair = FMMod20PrecompMT(remainder, threads, iterations);
     if (resultpair) {
         // If either factor is prime, add it to the factors
         if (primetools::isprime(resultpair->first)) {
