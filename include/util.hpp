@@ -7,6 +7,7 @@
 #include <string>
 #include <string_view>
 #include <ostream>
+#include <vector>
 
 #include <stdint.h>
 #include <gmp.h>
@@ -437,6 +438,36 @@ IsPerfectSquare(
 {
     uint64_t root = static_cast<uint64_t>(std::sqrt(N));
     return root * root == N || (root + 1) * (root + 1) == N;
+}
+
+const std::string
+GetHex(
+    const uint32_t Value,
+    const size_t Width = 0
+);
+
+template<typename T>
+std::vector<uint8_t>
+SerializeVLE(
+    const T Value
+)
+{
+    std::vector<uint8_t> bytes;
+    T val = Value;
+    do {
+        uint8_t byte;
+        if constexpr (std::is_same_v<T, mpz_class>) {
+            byte = static_cast<uint8_t>(val.get_ui() & 0x7F);
+        } else {
+            byte = static_cast<uint8_t>(val & 0x7F);
+        }
+        val >>= 7;
+        if (val != 0) {
+            byte |= 0x80; // Set continuation bit
+        }
+        bytes.push_back(byte);
+    } while (val != 0);
+    return bytes;
 }
 
 } // namespace primetools

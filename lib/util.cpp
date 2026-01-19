@@ -1,3 +1,9 @@
+#include <cctype>
+#include <iomanip>
+#include <sstream>
+#include <string>
+
+
 #include "gmp.h"
 #include "gmpxx.h"
 
@@ -74,8 +80,7 @@ const bool isprime(
 )
 {
     // Select a K for the Miller-Rabin test based on N
-    return mpz_probab_prime_p(N.get_mpz_t(), 40) > 0;
-    // return MillerRabin(N, 40);
+    return mpz_probab_prime_p(N.get_mpz_t(), 20) > 0;
 }
 
 const bool isprime(
@@ -166,6 +171,17 @@ is_numeric(
     }
 
     return true;
+}
+
+const std::string
+GetHex(
+    const uint32_t Value,
+    const size_t Width
+)
+{
+    std::stringstream ss;
+    ss << std::hex << std::setfill('0') << std::setw(Width) << Value;
+    return ss.str();
 }
 
 }

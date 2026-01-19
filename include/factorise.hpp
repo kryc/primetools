@@ -6,6 +6,7 @@
 
 #include <gmpxx.h>
 
+#include "factordb.hpp"
 #include "factors.hpp"
 #include "fermat.hpp"
 #include "pollard.hpp"
@@ -32,8 +33,9 @@ static inline void Log(
 // Try to factorise with increasing complexity
 template <typename T>
 const std::optional<PrimeFactors<T>>
-Factorise(
+FactoriseNumber(
     const T& N,
+    FactorDB<T>& Database,
     const size_t Threads = 0,
     const bool Verbose = false
 )
@@ -157,6 +159,17 @@ Factorise(
         }        
     }
 
+    // Check the database for any cached factors before trial division
+    if (Database.IsOpen()) {
+        Log("Checking FactorDB for cached factors...", Verbose);
+        auto lookup = Database.GetFactors(remainder);
+        if (lookup) {
+            Log("Found cached factors in FactorDB.", Verbose);
+            factors.Update(lookup.value());
+            return factors;
+        }
+    }
+
     // Fall back to trial division if still not fully factored
     remainder = N / factors.Product();
     if (primetools::isprime(remainder)) {
@@ -179,6 +192,33 @@ Factorise(
     }
 
     return std::nullopt;
+}
+
+// Try to factorise with increasing complexity
+template <typename T>
+const std::optional<PrimeFactors<T>>
+Factorise(
+    const T& N,
+    const size_t Threads = 0,
+    const bool Verbose = false,
+    const std::string_view FactorDBPath = ""
+)
+{
+    FactorDB<T> db(FactorDBPath);
+    if (db.IsOpen()) {
+        Log("Checking FactorDB for cached factors...", Verbose);
+        auto lookup = db.GetFactors(N);
+        if (lookup) {
+            Log("Found cached factors in FactorDB.", Verbose);
+            return lookup;
+        }
+    }
+    auto factors = FactoriseNumber<T>(N, db, Threads, Verbose);
+    if (factors && db.IsOpen()) {
+        Log("Storing factors in FactorDB...", Verbose);
+        db.AddFactors(factors.value());
+    }
+    return factors;
 }
 
 }

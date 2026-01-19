@@ -29,17 +29,18 @@ Options:
 std::tuple<mpz_class, PrimeFactors<mpz_class>>
 SumOfDivisors(
     const mpz_class& N,
+    const std::string_view DBPath,
     const size_t NumThreads
 )
 {
     // Get prime factors of N
-    auto factors = Factorise(N, NumThreads);
+    auto factors = Factorise(N, NumThreads, false, DBPath);
     if (!factors) {
         return {0, PrimeFactors<mpz_class>()};
     }
     // Cache the factors
     // if (Cache.IsOpen()) {
-    //     Cache.Write(factors);
+    //     Cache.AddFactors(factors);
     // }
     // Convert the prime factors to a vector of composite factors
     auto composites = factors->GetComposite();
@@ -70,12 +71,12 @@ DetectLoop(
 std::vector<mpz_class>
 AliquotSequence(
     const mpz_class& N,
-    const std::string_view CachePath,
+    const std::string_view DBPath,
     const bool Verbose,
     const size_t NumThreads
 )
 {
-    // PrimeFactorCache<> cache(CachePath);
+    // FactorDB<> cache(DBPath);
     std::vector<mpz_class> sequence;
     mpz_class current = N;
     size_t index = 0;
@@ -87,7 +88,7 @@ AliquotSequence(
     }
 
     while (true) {
-        auto [sum, factors] = SumOfDivisors(current, NumThreads);
+        auto [sum, factors] = SumOfDivisors(current, DBPath, NumThreads);
         if (sum == 0) {
             break;
         }
@@ -120,7 +121,7 @@ int main(
         return 1;
     }
 
-    std::string_view cache_path;
+    std::string_view db_path;
     mpz_class number;
     size_t num_threads = 0;
 
@@ -132,9 +133,9 @@ int main(
         //         std::cerr << "Failed to load prime gaps from " << prime_gaps << std::endl;
         //         return 1;
         //     }
-        // } else if ((arg == "-c" || arg == "--cache") && i + 1 < argc) {
-        //     cache_path = argv[++i];
-        if ((arg == "-t" || arg == "--threads") && i + 1 < argc) {
+        if ((arg == "-d" || arg == "--db") && i + 1 < argc) {
+            db_path = argv[++i];
+        } else if ((arg == "-t" || arg == "--threads") && i + 1 < argc) {
             num_threads = static_cast<size_t>(std::stoul(argv[++i]));
         } else if (arg == "-h" || arg == "--help") {
             std::cout << HELP_STRING << std::endl;
@@ -155,7 +156,7 @@ int main(
 
     try {
         std::cout << "Aliquot sequence for " << number << ":" << std::endl;
-        auto sequence = AliquotSequence(number, cache_path, true, num_threads);
+        auto sequence = AliquotSequence(number, db_path, true, num_threads);
         return 0;
     } catch (const std::exception& ex) {
         std::cerr << "Error during prime factorization: " << ex.what() << std::endl;

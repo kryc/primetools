@@ -50,6 +50,14 @@ target_include_directories(primetools PRIVATE
 target_link_libraries(primetools PRIVATE libprimetools gmp gmpxx)
 add_dependencies(primetools libprimetools)
 
+SET(FACTORDB_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/factordb.cpp)
+add_executable(factordb ${FACTORDB_SOURCES})
+target_include_directories(factordb PRIVATE
+                            ${CMAKE_CURRENT_SOURCE_DIR}/src/
+                            ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_link_libraries(factordb PRIVATE libprimetools gmp gmpxx)
+add_dependencies(factordb libprimetools)
+
 SET(ALIQUOT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/aliquot.cpp)
 add_executable(aliquot ${ALIQUOT_SOURCES})
 target_include_directories(aliquot PRIVATE

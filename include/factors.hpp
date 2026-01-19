@@ -126,6 +126,34 @@ public:
         return vec;
     }
 
+    // Serialize the factors to a byte array using VLE.
+    // The format is <product><num_factors>[<factor>]+
+    // We do not store the counts as these can be derived from the factor list.
+    std::vector<uint8_t>
+    Serialize(
+        void
+    ) const {
+        std::vector<uint8_t> data;
+        // Serialize the product
+        T product = Product();
+        std::vector<uint8_t> serialized = primetools::SerializeVLE(product);
+        data.insert(data.end(), serialized.begin(), serialized.end());
+
+        // Serialize the number of factors
+        serialized = primetools::SerializeVLE(Count());
+        data.insert(data.end(), serialized.begin(), serialized.end());
+
+        // Serialize each factor
+        for (const auto& [prime, count] : m_FactorCounts) {
+            for (size_t i = 0; i < count; ++i) {
+                serialized = primetools::SerializeVLE(prime);
+                data.insert(data.end(), serialized.begin(), serialized.end());
+            }
+        }
+
+        return data;
+    }
+
     // Function to convert prime factors to a vector of composite factors
     // By iterating over all combinations of prime factor powers
     std::vector<T>
