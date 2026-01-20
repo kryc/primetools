@@ -87,10 +87,12 @@ int main(
             return 1;
         }
 
-        const mpz_class n(positionals[1].data());
         const bool quiet = flags.find("quiet") != flags.end();
+        const std::string_view factor_db_path = flags.find("db") != flags.end() ? flags["db"] : "";
 
-        auto result = primetools::Factorise(n, 0, !quiet);
+        const mpz_class n(positionals[1].data());
+
+        auto result = primetools::Factorise(n, 0, !quiet, factor_db_path);
         OutputFactors(result);
     }
     else if (action == "fermat")
