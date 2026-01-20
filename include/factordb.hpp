@@ -125,6 +125,10 @@ public:
     void AddFactors(
         const PrimeFactors<T> Factors
     ) {
+        // Skip if there is only one factor (not useful to cache)
+        if (Factors.Size() <= 1) {
+            return;
+        }
         // Check if already exists
         if (GetFactors(Factors.Product())) {
             return;
