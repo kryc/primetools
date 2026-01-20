@@ -92,7 +92,7 @@ int main(
 
         const mpz_class n(positionals[1].data());
 
-        auto result = primetools::Factorise(n, 0, !quiet, factor_db_path);
+        auto result = primetools::Factorise(n, 0, factor_db_path, quiet ? primetools::LogQuiet : primetools::FactoriseLog);
         OutputFactors(result);
     }
     else if (action == "fermat")

@@ -1,8 +1,10 @@
 #include <array>
 #include <cstdint>
 #include <fstream>
+#include <iostream>
 #include <mutex>
 #include <span>
+#include <thread>
 #include <vector>
 
 #include "prime.hpp"
@@ -43,23 +45,29 @@ GetPrimesTo(
 {
     std::lock_guard<std::mutex> lock(gCachedPrimesMutex);
     if (Upper <= gCachedPrimesToLimit) {
-        // Find the index up to Upper
-        size_t index = std::lower_bound(
-            gCachedPrimesTo.begin(),
-            gCachedPrimesTo.end(),
-            Upper + 1
-        ) - gCachedPrimesTo.begin();
-        return std::span<const uint64_t>(gCachedPrimesTo.data(), index);
+        // Do a binary search to find the right size
+        size_t left = 0;
+        size_t right = gCachedPrimesTo.size();
+        while (left < right) {
+            const size_t mid = left + (right - left) / 2;
+            if (gCachedPrimesTo[mid] < Upper) {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        return std::span<const uint64_t>(gCachedPrimesTo.data(), left);
     }
 
     gCachedPrimesTo = GetPrimesInRange<uint64_t>(1, Upper);
     gCachedPrimesToLimit = Upper;
-    return std::span<const uint64_t>(gCachedPrimesTo.data(), gCachedPrimesTo.size());
+    return gCachedPrimesTo;
 }
 
 const bool LoadPrimeGaps(
     std::string_view FilePath
 ) {
+    std::lock_guard<std::mutex> lock(gCachedPrimesMutex);
     std::ifstream ifs(FilePath.data(), std::ios::binary);
     if (!ifs) {
         throw std::runtime_error("Failed to open prime gaps file: " + std::string(FilePath));
@@ -85,6 +93,28 @@ const bool LoadPrimeGaps(
 
     gCachedPrimesToLimit = gCachedPrimesTo.back();
     return true;
+}
+
+void LoadPrimeGapsInNewThread(
+    std::string_view FilePath
+) {
+    std::thread load_thread([FilePath]() {
+        try {
+            LoadPrimeGaps(FilePath);
+        } catch (const std::exception& e) {
+            // Handle error (log it, etc.)
+            std::cerr << "Error loading prime gaps: " << e.what() << std::endl;
+        }
+    });
+    load_thread.detach();
+}
+
+const size_t
+GetCachedPrimesLimit(
+    void
+) {
+    std::lock_guard<std::mutex> lock(gCachedPrimesMutex);
+    return gCachedPrimesToLimit;
 }
 
 } // namespace primetools

@@ -123,6 +123,15 @@ const bool LoadPrimeGaps(
     std::string_view FilePath
 );
 
+void LoadPrimeGapsInNewThread(
+    std::string_view FilePath
+);
+
+const size_t
+GetCachedPrimesLimit(
+    void
+);
+
 } // namespace primetools
 
 #endif // PRIME_HPP

@@ -27,6 +27,22 @@ Options:
     -h, --help  Show this help message
 )";
 
+static size_t gLastLogLength = 0;
+static mpz_class gCurrentTarget;
+static size_t gCurrentIndex = 0;
+
+void
+HandleLogs(
+    std::string_view Message
+)
+{
+    // Erase the last log
+    std::cout << '\r' << std::string(gLastLogLength, ' ') << std::flush;
+    std::cout << '\r' << std::setw(5) << gCurrentIndex << " : ";
+    std::cout << gCurrentTarget << " = " << Message << std::flush;
+    gLastLogLength = 5 + 3 + gCurrentTarget.get_str().size() + 3 + Message.size();
+}
+
 std::tuple<mpz_class, PrimeFactors<mpz_class>>
 SumOfDivisors(
     const mpz_class& N,
@@ -35,7 +51,8 @@ SumOfDivisors(
 )
 {
     // Get prime factors of N
-    auto factors = Factorise(N, NumThreads, false, DBPath);
+    gCurrentTarget = N;
+    auto factors = Factorise(N, NumThreads, DBPath, HandleLogs);
     if (!factors) {
         return {0, PrimeFactors<mpz_class>()};
     }
@@ -77,13 +94,7 @@ AliquotSequence(
     // FactorDB<> cache(DBPath);
     std::vector<mpz_class> sequence;
     mpz_class current = N;
-    size_t index = 0;
-    // Output the starting number
-    if (Verbose) {
-        std::cout <<
-            std::setw(5) << index++ <<
-            " : " << std::flush;
-    }
+    gCurrentIndex = 0;
 
     while (true) {
         auto [sum, factors] = SumOfDivisors(current, DBPath, NumThreads);
@@ -91,17 +102,15 @@ AliquotSequence(
             break;
         }
         if (Verbose) {
-            std::cout << factors.GetString() << std::endl;
-            std::cout << std::setw(5) << index <<
-                " : " <<
-                sum << " = " << std::flush;
+            HandleLogs(factors.GetString());
+            std::cout << std::endl;
         }
         sequence.push_back(sum);
         if (sum == current || DetectLoop(sequence, sum)) {
             break;
         }
         current = sum;
-        index++;
+        gCurrentIndex++;
     }
     if (Verbose) {
         std::cout << std::endl;
@@ -127,10 +136,8 @@ int main(
         std::string_view arg = argv[i];
         if ((arg == "-p" || arg == "--primes") && i + 1 < argc) {
             prime_gaps = argv[++i];
-            if (!primetools::LoadPrimeGaps(prime_gaps)) {
-                std::cerr << "Failed to load prime gaps from " << prime_gaps << std::endl;
-                return 1;
-            }
+            // Kick off the loading thread
+            primetools::LoadPrimeGapsInNewThread(prime_gaps);
         } else if ((arg == "-d" || arg == "--db") && i + 1 < argc) {
             db_path = argv[++i];
         } else if ((arg == "-t" || arg == "--threads") && i + 1 < argc) {

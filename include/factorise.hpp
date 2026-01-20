@@ -1,8 +1,15 @@
 #ifndef FACTORISE_HPP
 #define FACTORISE_HPP
 
+#include <algorithm>
+#include <cstdint>
+#include <functional>
+#include <iostream>
+#include <string_view>
+#include <thread>
 #include <optional>
 #include <utility>
+#include <vector>
 
 #include <gmpxx.h>
 
@@ -15,20 +22,25 @@
 
 namespace primetools {
 
+// Define a log callback type
+using LogCallback = std::function<void(std::string_view)>;
+
 // Factorise a perfect square
 const std::optional<PrimeFactors<mpz_class>>
 FactorisePerfectSquare(
     const mpz_class& N
 );
 
-static inline void Log(
-    std::string_view Message,
-    const bool Verbose
+static inline void FactoriseLog(
+    std::string_view Message
 )
 {
-    if (Verbose)
-        std::cout << Message << std::endl;
+    std::cout << Message << std::endl;
 }
+
+static inline void LogQuiet(
+    std::string_view Message
+) { return; };
 
 // Try to factorise with increasing complexity
 template <typename T>
@@ -37,7 +49,7 @@ FactoriseNumber(
     const T& N,
     FactorDB<T>& Database,
     const size_t Threads = 0,
-    const bool Verbose = false
+    LogCallback LogFn = FactoriseLog
 )
 {
     if (N < 2) {
@@ -48,16 +60,16 @@ FactoriseNumber(
     size_t threads = Threads > 0 ? Threads : std::thread::hardware_concurrency();
 
     // Check for perfect square
-    Log("Checking for perfect square...", Verbose);
+    LogFn("Checking for perfect square...");
     auto result = FactorisePerfectSquare(N);
     if (result) {
         return result;
     }
 
     // Check for small prime factors
-    Log("Checking small primes...", Verbose);
+    LogFn("Checking small primes...");
     size_t modulus = 510510;
-    result = TrialDivision(N, 0, 0, false, 0, T(0), T(modulus * threads), modulus, Verbose);
+    result = TrialDivision(N, 0, 0, false, 0, T(0), T(modulus * threads), modulus);
     if (result) {
         factors = result.value();
     }
@@ -71,19 +83,16 @@ FactoriseNumber(
     if (Database.IsOpen()) {
         auto lookup = Database.GetFactors(remainder);
         if (lookup) {
-            Log("Found cached factors in FactorDB.", Verbose);
+            LogFn("Found cached factors in FactorDB.");
             factors.Update(lookup.value());
             return factors;
         }
     }
 
-    Log("Current factors: " + factors.GetString(), Verbose);
-    Log("Remainder after small primes: " + remainder.get_str(), Verbose);
-
-    // Try using Pollards P-1
-    Log("Trying Pollard's P-1...", Verbose);
-    constexpr size_t kPollardB = (size_t)(1) << 32;
-    constexpr size_t kPollardBases = 256;
+    // Try using Pollards P-1 with a small B
+    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^20)");
+    constexpr size_t kPollardB = (size_t)(1) << 20;
+    constexpr size_t kPollardBases = 128;
     auto resultpair = PollardsPMinus1MT(remainder, threads, kPollardB, kPollardBases);
     if (resultpair) {
         // If either factor is prime, add it to the factors
@@ -93,15 +102,6 @@ FactoriseNumber(
         if (primetools::isprime(resultpair->second)) {
             factors.AddFactor(resultpair->second);
         }
-
-        remainder = N / factors.Product();
-        if (primetools::isprime(remainder)) {
-            factors.AddFactor(remainder);
-            return factors;
-        } else if (remainder == 1) {
-            return factors;
-        }
-        Log("Current factors: " + factors.GetString(), Verbose);
     }
 
     remainder = N / factors.Product();
@@ -112,13 +112,10 @@ FactoriseNumber(
         return factors;
     }
 
-    Log("Current factors: " + factors.GetString(), Verbose);
-    Log("Remainder after P-1: " + remainder.get_str(), Verbose);
-
     // Use Fermat's factorization method up to 2^24 iterations
+    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: FMMod20Precomp");
     size_t iterations = CalculateFermatIterations(N);
     iterations = std::min(iterations, (size_t)8192*2);
-    Log("Trying " + std::to_string(iterations) + " iterations of FMMod20Precomp (Fermat) factorization...", Verbose);
     resultpair = FMMod20PrecompMT(remainder, threads, iterations);
     if (resultpair) {
         // If either factor is prime, add it to the factors
@@ -138,11 +135,8 @@ FactoriseNumber(
         return factors;
     }
 
-    Log("Current factors: " + factors.GetString(), Verbose);
-    Log("Remainder after FMMod20Precomp: " + remainder.get_str(), Verbose);
-
     // Use Pollard's rho algorithm
-    Log("Trying Brent-Pollard's rho...", Verbose);
+    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: Brent-Pollard's Rho");
     for (;;) {
         resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, (size_t)(1) << 4);
         if (resultpair) {
@@ -161,24 +155,27 @@ FactoriseNumber(
             } else if (remainder == 1) {
                 return factors;
             }
-            Log("Current factors: " + factors.GetString(), Verbose);
+            LogFn("F: " + factors.GetString());
         } else {
             break;
         }        
     }
 
-    // Check the database for any cached factors before trial division
-    if (Database.IsOpen()) {
-        Log("Checking FactorDB for cached factors...", Verbose);
-        auto lookup = Database.GetFactors(remainder);
-        if (lookup) {
-            Log("Found cached factors in FactorDB.", Verbose);
-            factors.Update(lookup.value());
-            return factors;
+    // Try using Pollards P-1 with a large B
+    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^32)");
+    constexpr size_t kPollardLargeB = (size_t)(1) << 32;
+    constexpr size_t kPollardLargeBases = 128;
+    resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
+    if (resultpair) {
+        // If either factor is prime, add it to the factors
+        if (primetools::isprime(resultpair->first)) {
+            factors.AddFactor(resultpair->first);
+        }
+        if (primetools::isprime(resultpair->second)) {
+            factors.AddFactor(resultpair->second);
         }
     }
 
-    // Fall back to trial division if still not fully factored
     remainder = N / factors.Product();
     if (primetools::isprime(remainder)) {
         factors.AddFactor(remainder);
@@ -187,10 +184,27 @@ FactoriseNumber(
         return factors;
     }
 
-    Log("Current factors: " + factors.GetString(), Verbose);
-    Log("Remainder after Brent-Pollard's rho: " + remainder.get_str(), Verbose);
+    // Check the database for any cached factors before trial division
+    if (Database.IsOpen()) {
+        LogFn("Checking FactorDB for cached factors...");
+        auto lookup = Database.GetFactors(remainder);
+        if (lookup) {
+            LogFn("Found cached factors in FactorDB.");
+            factors.Update(lookup.value());
+            return factors;
+        }
+    }
 
-    Log("Falling back to trial division...", Verbose);
+    remainder = N / factors.Product();
+    if (primetools::isprime(remainder)) {
+        factors.AddFactor(remainder);
+        return factors;
+    } else if (remainder == 1) {
+        return factors;
+    }
+
+    // Fall back to trial division if still not fully factored
+    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: Trial Division");
     T last_finish = (modulus * threads);
     modulus = 223092870;
     result = TrialDivision(remainder, threads, 0, false, 0, last_finish, T(0), modulus, true);
@@ -208,22 +222,22 @@ const std::optional<PrimeFactors<T>>
 Factorise(
     const T& N,
     const size_t Threads = 0,
-    const bool Verbose = false,
-    const std::string_view FactorDBPath = ""
+    const std::string_view FactorDBPath = "",
+    LogCallback LogFn = FactoriseLog
 )
 {
     FactorDB<T> db(FactorDBPath);
     if (db.IsOpen()) {
-        Log("Checking FactorDB for cached factors...", Verbose);
+        LogFn("Checking FactorDB for cached factors...");
         auto lookup = db.GetFactors(N);
         if (lookup) {
-            Log("Found cached factors in FactorDB.", Verbose);
+            LogFn("Found cached factors in FactorDB.");
             return lookup;
         }
     }
-    auto factors = FactoriseNumber<T>(N, db, Threads, Verbose);
+    auto factors = FactoriseNumber<T>(N, db, Threads, LogFn);
     if (factors && db.IsOpen()) {
-        Log("Storing factors in FactorDB...", Verbose);
+        LogFn("Storing factors in FactorDB...");
         db.AddFactors(factors.value());
     }
     return factors;
