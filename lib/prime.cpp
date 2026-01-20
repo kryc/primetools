@@ -1,9 +1,9 @@
-#ifndef PRIME_HPP
-#define PRIME_HPP
-
 #include <array>
 #include <cstdint>
+#include <fstream>
+#include <mutex>
 #include <span>
+#include <vector>
 
 #include "prime.hpp"
 
@@ -22,6 +22,10 @@ namespace {
         419, 421, 431, 433, 439, 443, 449, 457, 461, 463,
         467, 479, 487, 491, 499, 503, 509, 521, 523, 541
     };
+
+    static std::vector<uint64_t> gCachedPrimesTo;
+    static size_t gCachedPrimesToLimit = 0;
+    static std::mutex gCachedPrimesMutex;
 }
 
 const std::span<const uint64_t>
@@ -32,6 +36,55 @@ GetSmallPrimes(
     return kSmallPrimes;
 }
 
-} // namespace primetools
+std::span<const uint64_t>
+GetPrimesTo(
+    const uint64_t Upper
+)
+{
+    std::lock_guard<std::mutex> lock(gCachedPrimesMutex);
+    if (Upper <= gCachedPrimesToLimit) {
+        // Find the index up to Upper
+        size_t index = std::lower_bound(
+            gCachedPrimesTo.begin(),
+            gCachedPrimesTo.end(),
+            Upper + 1
+        ) - gCachedPrimesTo.begin();
+        return std::span<const uint64_t>(gCachedPrimesTo.data(), index);
+    }
 
-#endif // PRIME_HPP
+    gCachedPrimesTo = GetPrimesInRange<uint64_t>(1, Upper);
+    gCachedPrimesToLimit = Upper;
+    return std::span<const uint64_t>(gCachedPrimesTo.data(), gCachedPrimesTo.size());
+}
+
+const bool LoadPrimeGaps(
+    std::string_view FilePath
+) {
+    std::ifstream ifs(FilePath.data(), std::ios::binary);
+    if (!ifs) {
+        throw std::runtime_error("Failed to open prime gaps file: " + std::string(FilePath));
+    }
+
+    gCachedPrimesTo.clear();
+
+    uint64_t last_prime = 0;
+    // Load VLE-encoded gaps
+    while (ifs.peek() != EOF) {
+        uint64_t gap = 0;
+        size_t shift = 0;
+        uint8_t byte = 0;
+        do {
+            ifs.read(reinterpret_cast<char*>(&byte), 1);
+            gap |= static_cast<uint64_t>(byte & 0x7F) << shift;
+            shift += 7;
+        } while (byte & 0x80);
+        uint64_t prime = last_prime + gap;
+        gCachedPrimesTo.push_back(prime);
+        last_prime = prime;
+    }
+
+    gCachedPrimesToLimit = gCachedPrimesTo.back();
+    return true;
+}
+
+} // namespace primetools

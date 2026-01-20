@@ -80,11 +80,46 @@ FactoriseNumber(
     Log("Current factors: " + factors.GetString(), Verbose);
     Log("Remainder after small primes: " + remainder.get_str(), Verbose);
 
+    // Try using Pollards P-1
+    Log("Trying Pollard's P-1...", Verbose);
+    constexpr size_t kPollardB = (size_t)(1) << 32;
+    constexpr size_t kPollardBases = 256;
+    auto resultpair = PollardsPMinus1MT(remainder, threads, kPollardB, kPollardBases);
+    if (resultpair) {
+        // If either factor is prime, add it to the factors
+        if (primetools::isprime(resultpair->first)) {
+            factors.AddFactor(resultpair->first);
+        }
+        if (primetools::isprime(resultpair->second)) {
+            factors.AddFactor(resultpair->second);
+        }
+
+        remainder = N / factors.Product();
+        if (primetools::isprime(remainder)) {
+            factors.AddFactor(remainder);
+            return factors;
+        } else if (remainder == 1) {
+            return factors;
+        }
+        Log("Current factors: " + factors.GetString(), Verbose);
+    }
+
+    remainder = N / factors.Product();
+    if (primetools::isprime(remainder)) {
+        factors.AddFactor(remainder);
+        return factors;
+    } else if (remainder == 1) {
+        return factors;
+    }
+
+    Log("Current factors: " + factors.GetString(), Verbose);
+    Log("Remainder after P-1: " + remainder.get_str(), Verbose);
+
     // Use Fermat's factorization method up to 2^24 iterations
     size_t iterations = CalculateFermatIterations(N);
     iterations = std::min(iterations, (size_t)8192*2);
     Log("Trying " + std::to_string(iterations) + " iterations of FMMod20Precomp (Fermat) factorization...", Verbose);
-    auto resultpair = FMMod20PrecompMT(remainder, threads, iterations);
+    resultpair = FMMod20PrecompMT(remainder, threads, iterations);
     if (resultpair) {
         // If either factor is prime, add it to the factors
         if (primetools::isprime(resultpair->first)) {
@@ -105,43 +140,6 @@ FactoriseNumber(
 
     Log("Current factors: " + factors.GetString(), Verbose);
     Log("Remainder after FMMod20Precomp: " + remainder.get_str(), Verbose);
-
-    // Try using Pollards P-1
-    Log("Trying Pollard's P-1...", Verbose);
-    for (;;) {
-        resultpair = PollardsPMinus1MT(remainder, threads);
-        if (resultpair) {
-            // If either factor is prime, add it to the factors
-            if (primetools::isprime(resultpair->first)) {
-                factors.AddFactor(resultpair->first);
-            }
-            if (primetools::isprime(resultpair->second)) {
-                factors.AddFactor(resultpair->second);
-            }
-
-            remainder = N / factors.Product();
-            if (primetools::isprime(remainder)) {
-                factors.AddFactor(remainder);
-                return factors;
-            } else if (remainder == 1) {
-                return factors;
-            }
-            Log("Current factors: " + factors.GetString(), Verbose);
-        } else {
-            break;
-        }
-    }
-
-    remainder = N / factors.Product();
-    if (primetools::isprime(remainder)) {
-        factors.AddFactor(remainder);
-        return factors;
-    } else if (remainder == 1) {
-        return factors;
-    }
-
-    Log("Current factors: " + factors.GetString(), Verbose);
-    Log("Remainder after P-1: " + remainder.get_str(), Verbose);
 
     // Use Pollard's rho algorithm
     Log("Trying Brent-Pollard's rho...", Verbose);

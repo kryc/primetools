@@ -7,6 +7,7 @@
 
 #include <gmpxx.h>
 
+#include "primegenerator.hpp"
 #include "util.hpp"
 #include "wheel30.hpp"
 
@@ -59,49 +60,25 @@ GetPrimesInRange(
     }
 
     std::vector<T> primes;
+    PrimeGenerator<T> generator(9699690);
 
-    if (Lower <= 2 && Upper >= 2) {
-        primes.push_back(2);
-    }
-    if (Lower <= 3 && Upper >= 3) {
-        primes.push_back(3);
-    }
-    if (Lower <= 5 && Upper >= 5) {
-        primes.push_back(5);
-    }
-
-    T candidate = Lower;
-
-    // Ensure candidate is odd
-    if (candidate % 2 == 0) {
-        candidate++;
-    }
-
-    // Seek backwards until candidate is congruent to 1 mod 30
-    while (candidate % 30 != 1) {
-        candidate--;
-    }
-
-    uint32_t gapword = kWheel30;
-    do {
-        if (candidate >= Lower && primetools::isprime(candidate)) {
-            primes.push_back(candidate);
+    for (;;) {
+        const T prime = generator.Next();
+        if (prime >= Lower && prime <= Upper) {
+            primes.push_back(prime);
         }
-        primetools::increment(candidate, gapword & kWheel30Mask);
-        gapword = std::rotr(gapword, kWheel30BitsPerGap);
-    } while (candidate <= Upper);
+        if (prime >= Upper) {
+            break;
+        }
+    }
 
     return primes;
 }
 
-template <typename T>
-std::vector<T>
+std::span<const uint64_t>
 GetPrimesTo(
-    const T Upper
-)
-{
-    return GetPrimesInRange<T>(1, Upper);
-}
+    const uint64_t Upper
+);
 
 template <typename T>
 std::vector<T>
@@ -114,34 +91,12 @@ GetFirstNPrimes(
     }
 
     std::vector<T> primes;
+    PrimeGenerator<T> generator;
     primes.reserve(N);
 
-    if (N >= 1) {
-        primes.push_back(2);
+    for (T i = 0; i < N; ++i) {
+        primes.push_back(generator.Next());
     }
-    if (N >= 2) {
-        primes.push_back(3);
-    }
-    if (N >= 3) {
-        primes.push_back(5);
-    }
-
-    if (N <= 3) {
-        return primes;
-    }
-
-    T candidate = 1;
-
-    // Use wheel30 to skip non-prime candidates
-    uint32_t gapword = kWheel30;
-    do {
-        primetools::increment(candidate, gapword & kWheel30Mask);
-        gapword = std::rotr(gapword, kWheel30BitsPerGap);
-
-        if (primetools::isprime(candidate)) {
-            primes.push_back(candidate);
-        }
-    } while (primes.size() < N);
 
     return primes;
 }
@@ -156,13 +111,17 @@ GetTrialDivisionModuliForPrime(
         throw std::invalid_argument("Prime must be greater than 1");
     }
 
-    auto primes = primetools::GetPrimesTo<T>(Prime);
+    auto primes = primetools::GetPrimesTo(Prime);
     uint64_t modulus = 1;
     for (const auto& p : primes) {
         modulus *= p;
     }
     return modulus;
 }
+
+const bool LoadPrimeGaps(
+    std::string_view FilePath
+);
 
 } // namespace primetools
 

@@ -10,6 +10,7 @@
 
 #include <gmpxx.h>
 
+#include "prime.hpp"
 #include "wheel.hpp"
 
 namespace primetools {

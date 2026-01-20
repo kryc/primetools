@@ -3,7 +3,6 @@
 
 #include <vector>
 
-#include "prime.hpp"
 #include "wheel30.hpp"
 
 namespace primetools {

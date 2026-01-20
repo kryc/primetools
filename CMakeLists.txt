@@ -66,6 +66,14 @@ target_include_directories(aliquot PRIVATE
 target_link_libraries(aliquot PRIVATE libprimetools gmp gmpxx)
 add_dependencies(aliquot libprimetools)
 
+SET(PRIMEGEN_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/primegen.cpp)
+add_executable(primegen ${PRIMEGEN_SOURCES})
+target_include_directories(primegen PRIVATE
+                            ${CMAKE_CURRENT_SOURCE_DIR}/src/
+                            ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_link_libraries(primegen PRIVATE libprimetools gmp gmpxx)
+add_dependencies(primegen libprimetools)
+
 # Tests
 file(GLOB_RECURSE TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
 add_executable(unittest EXCLUDE_FROM_ALL ${TEST_SOURCES})

@@ -15,6 +15,7 @@
 
 #include "factorise.hpp"
 #include "factors.hpp"
+#include "prime.hpp"
 
 using namespace primetools;
 
@@ -38,10 +39,7 @@ SumOfDivisors(
     if (!factors) {
         return {0, PrimeFactors<mpz_class>()};
     }
-    // Cache the factors
-    // if (Cache.IsOpen()) {
-    //     Cache.AddFactors(factors);
-    // }
+
     // Convert the prime factors to a vector of composite factors
     auto composites = factors->GetComposite();
     // Sum the composite factors excluding n itself
@@ -121,19 +119,19 @@ int main(
         return 1;
     }
 
-    std::string_view db_path;
+    std::string_view db_path, prime_gaps;
     mpz_class number;
     size_t num_threads = 0;
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
-        // if ((arg == "-p" || arg == "--primes") && i + 1 < argc) {
-        //     prime_gaps = argv[++i];
-        //     if (!LoadPrimeGaps(prime_gaps)) {
-        //         std::cerr << "Failed to load prime gaps from " << prime_gaps << std::endl;
-        //         return 1;
-        //     }
-        if ((arg == "-d" || arg == "--db") && i + 1 < argc) {
+        if ((arg == "-p" || arg == "--primes") && i + 1 < argc) {
+            prime_gaps = argv[++i];
+            if (!primetools::LoadPrimeGaps(prime_gaps)) {
+                std::cerr << "Failed to load prime gaps from " << prime_gaps << std::endl;
+                return 1;
+            }
+        } else if ((arg == "-d" || arg == "--db") && i + 1 < argc) {
             db_path = argv[++i];
         } else if ((arg == "-t" || arg == "--threads") && i + 1 < argc) {
             num_threads = static_cast<size_t>(std::stoul(argv[++i]));
