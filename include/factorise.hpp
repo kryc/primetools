@@ -67,6 +67,16 @@ FactoriseNumber(
         return factors;
     }
 
+    // Do a quick lookup of the remainder in the factor DB
+    if (Database.IsOpen()) {
+        auto lookup = Database.GetFactors(remainder);
+        if (lookup) {
+            Log("Found cached factors in FactorDB.", Verbose);
+            factors.Update(lookup.value());
+            return factors;
+        }
+    }
+
     Log("Current factors: " + factors.GetString(), Verbose);
     Log("Remainder after small primes: " + remainder.get_str(), Verbose);
 
@@ -184,8 +194,8 @@ FactoriseNumber(
 
     Log("Falling back to trial division...", Verbose);
     T last_finish = (modulus * threads);
-    modulus = 9699690;
-    result = TrialDivision(remainder, threads, 0, false, 0, last_finish, T(0), modulus);
+    modulus = 223092870;
+    result = TrialDivision(remainder, threads, 0, false, 0, last_finish, T(0), modulus, true);
     if (result) {
         factors.Update(result.value());
         return factors;

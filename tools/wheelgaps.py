@@ -84,7 +84,7 @@ def main(out_file: str, max_prime: int, pack: int = 0, use_128: bool = False):
     # assert expected_size == actual_size, f"Expected file size {expected_size}, got {actual_size}"
 
 if __name__ == "__main__":
-    # First primes: 2, 3, 5(30), 7(210), 11(2310), 13(30030), 17(510510), 19(9699690), 23(223092870), 29, 31, 37, 41, 43, 47
+    # First primes: 2, 3, 5(30), 7(210), 11(2310), 13(30030), 17(510510), 19(9699690), 23(223092870), 29(6469693230), 31, 37, 41, 43, 47
     parser = argparse.ArgumentParser(description="Calculate wheel gaps for prime sieving.")
     parser.add_argument("output", type=str, help="Output file name.")
     parser.add_argument("max_prime", type=int, help="Maximum prime to use for wheel calculation.")

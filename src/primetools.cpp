@@ -306,7 +306,7 @@ int main(
     }
     else if (action == "moduli")
     {
-        std::cout << "Supported wheel moduli: 30, 210, 2310, 30030, 510510, 9699690, 223092870" << std::endl;
+        std::cout << "Supported wheel moduli: 30, 210, 2310, 30030, 510510, 9699690, 223092870, 6469693230, 200560490130, 7420738134810, 304250263527210" << std::endl;
     }
     else if (action == "getmodulus")
     {

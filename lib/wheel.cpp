@@ -44,6 +44,12 @@ GetPrimesForWheelModulus(
             return primes.subspan(0, 9); // 2 - 23
         case 6469693230:
             return primes.subspan(0, 10); // 2 - 29
+        case 200560490130:
+            return primes.subspan(0, 11); // 2 - 31
+        case 7420738134810:
+            return primes.subspan(0, 12); // 2 - 37
+        case 304250263527210:
+            return primes.subspan(0, 13); // 2 - 41
         default:
             throw std::invalid_argument("Unsupported wheel Modulus");
     }

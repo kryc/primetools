@@ -12,14 +12,14 @@ TEST(FactorDB, GetPaths) {
     db.Clear();
     mpz_class value(0x123456789abcdef);
     auto index_path = db.GetFactorIndex(value);
-    EXPECT_EQ(index_path, std::filesystem::path("/tmp/factordb_cache/factors_89abcdef.idx"));
+    EXPECT_EQ(index_path, std::filesystem::path("/tmp/factordb_cache/factors_bcdef.i32"));
     auto data_path = db.GetFactorData(value);
-    EXPECT_EQ(data_path, std::filesystem::path("/tmp/factordb_cache/factors_89abcdef.dat"));
+    EXPECT_EQ(data_path, std::filesystem::path("/tmp/factordb_cache/factors_bcdef.dat"));
     value = 0x01;
     index_path = db.GetFactorIndex(value);
-    EXPECT_EQ(index_path, std::filesystem::path("/tmp/factordb_cache/factors_000001.idx"));
+    EXPECT_EQ(index_path, std::filesystem::path("/tmp/factordb_cache/factors_00001.i32"));
     data_path = db.GetFactorData(value);
-    EXPECT_EQ(data_path, std::filesystem::path("/tmp/factordb_cache/factors_000001.dat"));
+    EXPECT_EQ(data_path, std::filesystem::path("/tmp/factordb_cache/factors_00001.dat"));
 }
 
 TEST(FactorDB, WriteAndReadFactors) {

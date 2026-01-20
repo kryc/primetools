@@ -39,6 +39,7 @@ int main(
     std::string_view db_path;
     std::string_view action;
     std::vector<std::string_view> positionals;
+    std::map<std::string_view, std::string_view> flags;
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
@@ -49,6 +50,16 @@ int main(
         } else if (arg == "--help" || arg == "-h") {
             std::cout << HELP_STRING << std::endl;
             return 0;
+        } else if (arg.rfind("--", 0) == 0) {
+            size_t eq_pos = arg.find('=');
+            if (eq_pos != std::string::npos) {
+                std::string_view key = arg.substr(2, eq_pos - 2);
+                std::string_view value = arg.substr(eq_pos + 1);
+                flags[key] = value;
+            } else {
+                std::string_view key = arg.substr(2);
+                flags[key] = "true";
+            }
         } else {
             positionals.push_back(arg);
         }
@@ -114,6 +125,17 @@ int main(
     } else if (action == "count") {
         std::cout << db.GetCount() << std::endl;
         return 1;
+    } else if (action == "rebuildindex") {
+        size_t new_index_bits = 32;
+        if (flags.find("bits") != flags.end()) {
+            new_index_bits = std::stoul(std::string(flags["bits"]));
+            if (new_index_bits != 32 && new_index_bits != 64) {
+                std::cerr << "Error: Index bits must be either 32 or 64." << std::endl;
+                return 1;
+            }
+        }
+        db.RebuildIndex(new_index_bits);
+        std::cout << "Rebuilt index files to " << new_index_bits << "-bit." << std::endl;
     } else {
         std::cerr << "Unknown action: " << action << std::endl;
         return 1;
