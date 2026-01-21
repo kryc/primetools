@@ -27,7 +27,7 @@ if(!APPLE)
 endif()
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -funroll-loops -ffast-math -fomit-frame-pointer -fno-rtti")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -ggdb -O0 -fsanitize=address -fno-omit-frame-pointer")
 set(CMAKE_EXE_LINKER_FLAGS "-Wc23-extensions")
 if(APPLE)
     execute_process(COMMAND brew --prefix OUTPUT_VARIABLE HOMEBREW_PREFIX OUTPUT_STRIP_TRAILING_WHITESPACE)

@@ -123,6 +123,10 @@ const bool LoadPrimeGaps(
     std::string_view FilePath
 );
 
+const bool LoadPrimes(
+    std::string_view FilePath
+);
+
 void LoadPrimeGapsInNewThread(
     std::string_view FilePath
 );

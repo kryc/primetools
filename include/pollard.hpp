@@ -148,14 +148,25 @@ BrentPollardsRhoMT(
     std::atomic<bool> found(false);
     std::optional<std::pair<T, T>> result;
     std::mutex result_mutex;
-    PrimeGenerator<T> primegen;
 
-    for (size_t thread_id = 0; thread_id < Threads; ++thread_id) {
-        thread_pool.emplace_back([&]() {
-            T thread_starting_value = primegen.Next();
+    const size_t num_threads = Threads ? Threads : std::max<size_t>(1, std::thread::hardware_concurrency());
+
+    // NOTE: PrimeGenerator is not thread-safe (it mutates internal state).
+    // Precompute independent starting values on the main thread.
+    std::vector<T> starting_values;
+    starting_values.reserve(num_threads);
+    {
+        PrimeGenerator<T> primegen;
+        for (size_t i = 0; i < num_threads; ++i) {
+            starting_values.emplace_back(T(primegen.Next()));
+        }
+    }
+
+    for (size_t thread_id = 0; thread_id < num_threads; ++thread_id) {
+        const T thread_starting_value = starting_values[thread_id];
+        thread_pool.emplace_back([&, thread_starting_value]() {
             auto thread_result = BrentPollardsRho<T>(N, M, thread_starting_value, MaxIterations);
-            if (thread_result && !found.load()) {
-                found.store(true);
+            if (thread_result && !found.exchange(true)) {
                 std::lock_guard<std::mutex> lock(result_mutex);
                 result = thread_result;
             }

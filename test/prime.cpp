@@ -77,7 +77,10 @@ TEST(Prime, GetPrimesTo)
 
     for (const auto& testCase : testCases) {
         const auto primes = primetools::GetPrimesTo(testCase.upper);
-        EXPECT_EQ(primes, testCase.expectedPrimes);
+        EXPECT_EQ(primes.size(), testCase.expectedPrimes.size());
+        for (size_t i = 0; i < primes.size(); i++) {
+            EXPECT_EQ(primes[i], testCase.expectedPrimes[i]);
+        }
     }
 }
 

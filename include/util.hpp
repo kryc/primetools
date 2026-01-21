@@ -60,7 +60,8 @@ TruncateNumber(
         str = uint128_to_string(Number);
     }
     else {
-        str = Number.get_str();
+        mpz_class n = Number;
+        str = n.get_str();
     }
     if (str.length() <= StartDigits + EndDigits) {
         return str;
@@ -247,7 +248,7 @@ decrement(
     const T2 Amount = 1
 )
 {
-    Value += Amount;
+    Value -= Amount;
 }
 
 static inline uint64_t

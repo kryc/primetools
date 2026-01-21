@@ -68,14 +68,17 @@ FactoriseNumber(
 
     // Check for small prime factors
     LogFn("Checking small primes...");
-    size_t modulus = 510510;
-    result = TrialDivision(N, 0, 0, false, 0, T(0), T(modulus * threads), modulus);
+    const size_t modulus = 223092870;
+    result = TrialDivision(N, 0, modulus, false, 0, T(0), T(modulus * threads), modulus, false, TrialDivisionStrategy::Linear);
     if (result) {
         factors = result.value();
     }
 
     T remainder = N / result->Product();
-    if (remainder == 1) {
+    if (primetools::isprime(remainder)) {
+        factors.AddFactor(remainder);
+        return factors;
+    } else if (remainder == 1) {
         return factors;
     }
 
@@ -162,8 +165,8 @@ FactoriseNumber(
     }
 
     // Try using Pollards P-1 with a large B
-    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^32)");
-    constexpr size_t kPollardLargeB = (size_t)(1) << 32;
+    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^30)");
+    constexpr size_t kPollardLargeB = (size_t)(1) << 30;
     constexpr size_t kPollardLargeBases = 128;
     resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
     if (resultpair) {
@@ -203,11 +206,10 @@ FactoriseNumber(
         return factors;
     }
 
-    // Fall back to trial division if still not fully factored
+    // Fall back to hybrid trial division (this is not ideal!)
     LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: Trial Division");
     T last_finish = (modulus * threads);
-    modulus = 223092870;
-    result = TrialDivision(remainder, threads, 0, false, 0, last_finish, T(0), modulus, true);
+    result = TrialDivision(remainder, threads, modulus, false, 0, last_finish, T(0), modulus, false, TrialDivisionStrategy::Hybrid);
     if (result) {
         factors.Update(result.value());
         return factors;

@@ -134,10 +134,13 @@ int main(
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
-        if ((arg == "-p" || arg == "--primes") && i + 1 < argc) {
+        if ((arg == "-g" || arg == "--prime-gaps") && i + 1 < argc) {
             prime_gaps = argv[++i];
             // Kick off the loading thread
             primetools::LoadPrimeGapsInNewThread(prime_gaps);
+        } else if ((arg == "-p" || arg == "--primes") && i + 1 < argc) {
+            std::string_view primes_file = argv[++i];
+            primetools::LoadPrimes(primes_file);
         } else if ((arg == "-d" || arg == "--db") && i + 1 < argc) {
             db_path = argv[++i];
         } else if ((arg == "-t" || arg == "--threads") && i + 1 < argc) {

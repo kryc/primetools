@@ -1,11 +1,14 @@
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <mutex>
 #include <span>
 #include <thread>
 #include <vector>
+
+#include <sys/mman.h>
 
 #include "prime.hpp"
 
@@ -26,6 +29,11 @@ namespace {
     };
 
     static std::vector<uint64_t> gCachedPrimesTo;
+    static uint64_t* gLoadedPrimes = nullptr;
+    static size_t gLoadedPrimesCount = 0;
+    static std::span<const uint64_t> gLoadedPrimesSpan;
+    static size_t gLoadedPrimesLimit = 0;
+
     static size_t gCachedPrimesToLimit = 0;
     static std::mutex gCachedPrimesMutex;
 }
@@ -44,6 +52,23 @@ GetPrimesTo(
 )
 {
     std::lock_guard<std::mutex> lock(gCachedPrimesMutex);
+
+    // Try the loaded primes first
+    if (gLoadedPrimes != nullptr && Upper <= gLoadedPrimesLimit) {
+        // Do a binary search to find the right size
+        size_t left = 0;
+        size_t right = gLoadedPrimesCount;
+        while (left < right) {
+            const size_t mid = left + (right - left) / 2;
+            if (gLoadedPrimes[mid] < Upper) {
+                left = mid + 1;
+            } else {
+                right = mid;
+            }
+        }
+        return std::span<const uint64_t>(gLoadedPrimes, left);
+    }
+
     if (Upper <= gCachedPrimesToLimit) {
         // Do a binary search to find the right size
         size_t left = 0;
@@ -92,6 +117,46 @@ const bool LoadPrimeGaps(
     }
 
     gCachedPrimesToLimit = gCachedPrimesTo.back();
+    return true;
+}
+
+const bool LoadPrimes(
+    std::string_view FilePath
+) {
+    std::lock_guard<std::mutex> lock(gCachedPrimesMutex);
+
+    if (gLoadedPrimes != nullptr) {
+        throw std::runtime_error("Primes have already been loaded from a file.");
+    }
+    
+    FILE* fp = fopen(FilePath.data(), "rb");
+    if (!fp) {
+        throw std::runtime_error("Failed to open primes file: " + std::string(FilePath));
+    }
+
+    // Get file size
+    size_t file_size = std::filesystem::file_size(FilePath);
+
+    if (gLoadedPrimes == nullptr) {
+        size_t num_primes = file_size / sizeof(uint64_t);
+        // Memory-map the file
+        int fd = fileno(fp);
+        void* mapped = mmap(
+            nullptr,
+            file_size,
+            PROT_READ,
+            MAP_PRIVATE,
+            fd,
+            0
+        );
+        if (mapped == MAP_FAILED) {
+            throw std::runtime_error("Failed to memory-map primes file: " + std::string(FilePath));
+        }
+        gLoadedPrimes = static_cast<uint64_t*>(mapped);
+        gLoadedPrimesCount = num_primes;
+        gLoadedPrimesSpan = std::span<const uint64_t>(gLoadedPrimes, gLoadedPrimesCount);
+        gLoadedPrimesLimit = gLoadedPrimes[num_primes - 1];
+    }
     return true;
 }
 

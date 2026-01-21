@@ -203,12 +203,12 @@ int main(
         const size_t bits = flags.find("bits") != flags.end() ? std::stoul(std::string(flags["bits"])) : 0;
         const size_t threads = flags.find("threads") != flags.end() ? std::stoul(std::string(flags["threads"])) : 1;
         const size_t blocksize = flags.find("blocksize") != flags.end() ? std::stoul(std::string(flags["blocksize"])) : 0;
-        const uint64_t seed = flags.find("seed") != flags.end() ? std::stoull(std::string(flags["seed"])) : 0;
-        const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(std::string(flags["max-iterations"])) : std::numeric_limits<size_t>::max();
+        // const uint64_t seed = flags.find("seed") != flags.end() ? std::stoull(std::string(flags["seed"])) : 0;
+        // const size_t max_iterations = flags.find("max-iterations") != flags.end() ? std::stoul(std::string(flags["max-iterations"])) : std::numeric_limits<size_t>::max();
 
         std::cout << "Random prime factorization of " << primetools::TruncateNumber(n) << std::endl;
 
-        auto result = primetools::TrialDivisionRandom<mpz_class>(n, threads, blocksize, !noguess, bits, start, end, modulus, seed, max_iterations);
+        auto result = primetools::TrialDivision<mpz_class>(n, threads, blocksize, !noguess, bits, start, end, modulus, primetools::TrialDivisionStrategy::Random);
         OutputFactors(result);
     }
     else if (action == "trial" || action == "wheel" || action == "trialdivision" || action == "td")
@@ -251,7 +251,7 @@ int main(
         }
         else
         {
-            auto result = primetools::TrialDivision(n, threads, blocksize, !noguess, bits, start, end, modulus);
+            auto result = primetools::TrialDivision(n, threads, blocksize, !noguess, bits, start, end, modulus, true, primetools::TrialDivisionStrategy::MeetInTheMiddle);
             OutputFactors(result);
         }
     }

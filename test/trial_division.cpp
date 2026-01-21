@@ -123,3 +123,36 @@ TEST(TrialDivision, GenerateWheelGapsForModulus223092870)
     }
 }
 #endif
+
+TEST(TrialDivision, MeetInTheMiddleDoesNotSkipChunks)
+{
+    // Construct a semiprime where the smaller factor lies in a specific chunk.
+    // This guards against gaps caused by incorrect meet-in-the-middle scheduling.
+    static constexpr uint64_t p = 1009;
+    static constexpr uint64_t q = 1'000'003;
+    static constexpr uint64_t n = p * q;
+
+    static constexpr size_t threads = 6;
+    static constexpr size_t modulus = 30;
+    static constexpr size_t block_size = 300; // multiple of modulus
+
+    // Search a fixed range so the factor is inside a known chunk.
+    static constexpr uint64_t range_lower = 0;
+    static constexpr uint64_t range_upper = 2'100; // 7 chunks of 300
+
+    auto result = primetools::TrialDivision<uint64_t>(
+        n,
+        threads,
+        block_size,
+        false,     // GuessSize
+        0,         // Bits
+        range_lower,
+        range_upper,
+        modulus,
+        true,     // Status
+        primetools::TrialDivisionStrategy::MeetInTheMiddle
+    );
+
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(result->HasFactor(p));
+}
