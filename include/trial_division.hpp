@@ -3,6 +3,7 @@
 
 #include <array>
 #include <atomic>
+#include <functional>
 #include <future>
 #include <iostream>
 #include <mutex>
@@ -18,6 +19,7 @@
 #include "analyse.hpp"
 #include "bigint_avx.hpp"
 #include "factors.hpp"
+#include "logging.hpp"
 #include "primegenerator.hpp"
 #include "random.hpp"
 #include "util.hpp"
@@ -332,7 +334,7 @@ TrialDivisionLinearWorker(
     std::atomic<bool>& Found,
     T& CurrentChunk,
     std::mutex& StatusMutex,
-    const bool Status = false
+    const LogCallback LogFn = primetools::LogQuiet
 ) {
     T thread_start = LowerBound + (ThreadId * ChunkSize);
     T thread_end = thread_start + ChunkSize;
@@ -351,7 +353,8 @@ TrialDivisionLinearWorker(
         // At most one prime factor greater than sqrt(N) and we usually
         // only do trial division up to sqrt(N). We can return early if
         // we have found all other factors and only the prime remainder is left.
-        if (primetools::isprime(thread_remainder)) {
+        // Also check its above the upper bound to avoid adding twice.
+        if (primetools::isprime(thread_remainder) && thread_remainder > UpperBound) {
             std::lock_guard<std::mutex> lock(StatusMutex);
             if (!Factors.HasFactor(thread_remainder)) {
                 Factors.AddFactor(thread_remainder);
@@ -366,22 +369,16 @@ TrialDivisionLinearWorker(
         }
 
         // Report our status
-        if (Status)
+        T chunk_index = (thread_start - LowerBound) / ChunkSize;
         {
-            T chunk_index = (thread_start - LowerBound) / ChunkSize;
-            {
-                std::lock_guard<std::mutex> lock(StatusMutex);
-                if (chunk_index > CurrentChunk) {
-                    CurrentChunk = chunk_index;
-                }
-                if (Status)
-                {
-                    std::cout << '\r' << "Chunk " << CurrentChunk <<
-                    " (" << thread_start << " to " << thread_end << ")" <<
-                    " of " << Chunks << " (" <<
-                        (CurrentChunk * 100) / Chunks << "%) " << std::flush;
-                }
+            std::lock_guard<std::mutex> lock(StatusMutex);
+            if (chunk_index > CurrentChunk) {
+                CurrentChunk = chunk_index;
             }
+            LogFn("Chunk " + primetools::ToString(CurrentChunk) +
+            " (" + primetools::ToString(thread_start) + " to " + primetools::ToString(thread_end) + ")" +
+            " of " + primetools::ToString(Chunks) + " (" +
+                primetools::ToString((CurrentChunk * 100) / Chunks) + "%)");
         }
         
         auto result = TrialDivisionRange<T>(thread_remainder, thread_start, thread_end, Modulus);
@@ -418,7 +415,7 @@ TrialDivisionRandomWorker(
     std::atomic<bool>& Found,
     T& CurrentChunk,
     std::mutex& StatusMutex,
-    const bool Status = false
+    const LogCallback LogFn = primetools::LogQuiet
 ) {
     // Make a thread-local copy of Factors and Remainder to avoid contention
     PrimeFactors<T> thread_factors;
@@ -448,7 +445,7 @@ TrialDivisionRandomWorker(
         // At most one prime factor greater than sqrt(N) and we usually
         // only do trial division up to sqrt(N). We can return early if
         // we have found all other factors and only the prime remainder is left.
-        if (primetools::isprime(thread_remainder)) {
+        if (primetools::isprime(thread_remainder) && thread_remainder > UpperBound) {
             std::lock_guard<std::mutex> lock(StatusMutex);
             if (!Factors.HasFactor(thread_remainder)) {
                 Factors.AddFactor(thread_remainder);
@@ -503,7 +500,7 @@ TrialDivisionMeetInTheMiddleWorker(
     std::atomic<bool>& Found,
     T& CurrentChunk,
     std::mutex& StatusMutex,
-    const bool Status = false
+    const LogCallback LogFn = primetools::LogQuiet
 ) {
     // Meet in the middle works by threads starting at either the lower bound
     // and working up, or starting at the upper bound and working down.
@@ -544,7 +541,7 @@ TrialDivisionMeetInTheMiddleWorker(
         // At most one prime factor greater than sqrt(N) and we usually
         // only do trial division up to sqrt(N). We can return early if
         // we have found all other factors and only the prime remainder is left.
-        if (primetools::isprime(thread_remainder)) {
+        if (primetools::isprime(thread_remainder) && thread_remainder > UpperBound) {
             std::lock_guard<std::mutex> lock(StatusMutex);
             if (!Factors.HasFactor(thread_remainder)) {
                 Factors.AddFactor(thread_remainder);
@@ -558,26 +555,20 @@ TrialDivisionMeetInTheMiddleWorker(
             break;
         }
         
-        // Report our status
-        if (Status)
-        {
+        // Report our status if thread 0
+        if (ThreadId == 0) {
+            std::lock_guard<std::mutex> lock(StatusMutex);
+            thread_remainder = N / Factors.Product();
             T chunk_index = (thread_start - LowerBound) / ChunkSize;
-            {
-                std::lock_guard<std::mutex> lock(StatusMutex);
-                if (chunk_index > CurrentChunk) {
-                    CurrentChunk = chunk_index;
-                }
-                if (Status)
-                {
-                    // std::cout << '\r' << "Chunk " << CurrentChunk <<
-                    // " (" << thread_start << " to " << thread_end << ")" <<
-                    // " of " << Chunks << " (" <<
-                    //     (CurrentChunk * 100) / Chunks << "%) " << std::flush;
-                    std::cout << "Thread " << ThreadId <<
-                        " processing chunk " << chunk_index <<
-                        " (" << thread_start << " to " << thread_end << ")" << std::endl;
-                }
+            
+            if (chunk_index > CurrentChunk) {
+                CurrentChunk = chunk_index;
             }
+            
+            // Thread zero only reports up to the middle
+            T thread0_chunks = Chunks / 2;
+            T percent_complete = (CurrentChunk * 100) / thread0_chunks;
+            LogFn(primetools::ToString(CurrentChunk) + " / " + primetools::ToString(Chunks / 2) + " (" + primetools::ToString(percent_complete) + "%)");
         }
 
         auto result = TrialDivisionRange<T>(thread_remainder, thread_start, thread_end, Modulus);
@@ -615,8 +606,8 @@ TrialDivision(
     const T& RangeLower,
     const T& RangeUpper,
     const size_t Modulus,
-    const bool Status = false,
-    const TrialDivisionStrategy Strategy = TrialDivisionStrategy::Linear
+    const TrialDivisionStrategy Strategy = TrialDivisionStrategy::Linear,
+    const LogCallback LogFn = primetools::LogQuiet
 )
 {
     const size_t num_threads = Threads ? Threads : std::thread::hardware_concurrency();
@@ -634,11 +625,8 @@ TrialDivision(
     // Number of chunk start positions where start <= upper_bound.
     const T chunks = (diff / block_size) + 1;
 
-    if (Status)
-    {
-        std::cout << "Trying factorization of primes in range [" << primetools::TruncateNumber<T>(lower_bound) << ", " << primetools::TruncateNumber<T>(upper_bound) <<
-            "] using modulus " << Modulus << ". " << chunks << " chunks" << std::endl;
-    }
+    LogFn("Trying factorization of primes in range [" + primetools::TruncateNumber<T>(lower_bound) + ", " + primetools::TruncateNumber<T>(upper_bound) +
+        "] using modulus " + std::to_string(Modulus) + ". " + primetools::ToString(chunks) + " chunks");
 
     // Single-threaded linear search case
     if (num_threads == 1 && Strategy == TrialDivisionStrategy::Linear) {
@@ -667,7 +655,7 @@ TrialDivision(
                 std::ref(found),
                 std::ref(current_chunk),
                 std::ref(status_mutex),
-                Status
+                LogFn
             ));
         }
     } else if (Strategy == TrialDivisionStrategy::MeetInTheMiddle) {
@@ -682,7 +670,7 @@ TrialDivision(
                 std::ref(found),
                 std::ref(current_chunk),
                 std::ref(status_mutex),
-                Status
+                LogFn
             ));
         }
     } else if (Strategy == TrialDivisionStrategy::Random) {
@@ -697,7 +685,7 @@ TrialDivision(
                 std::ref(found),
                 std::ref(current_chunk),
                 std::ref(status_mutex),
-                Status
+                LogFn
             ));
         }
     } else if (Strategy == TrialDivisionStrategy::Hybrid) {
@@ -718,7 +706,7 @@ TrialDivision(
                     std::ref(found),
                     std::ref(current_chunk),
                     std::ref(status_mutex),
-                    Status
+                    LogFn
                 ));
             }
         } else {
@@ -733,7 +721,7 @@ TrialDivision(
                     std::ref(found),
                     std::ref(current_chunk),
                     std::ref(status_mutex),
-                    Status
+                    LogFn
                 ));
             }
         }
@@ -748,7 +736,7 @@ TrialDivision(
                 std::ref(found),
                 std::ref(current_chunk),
                 std::ref(status_mutex),
-                Status
+                LogFn
             ));
         }
     }

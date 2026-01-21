@@ -47,6 +47,30 @@ inline std::ostream& operator<<(std::ostream& os, __int128_t value) {
 
 namespace primetools {
 
+static inline std::string
+ToString(
+    const mpz_class& Number
+)
+{
+    return Number.get_str();
+}
+
+static inline std::string
+ToString(
+    const __uint128_t& Number
+)
+{
+    return uint128_to_string(Number);
+}
+
+static inline std::string
+ToString(
+    const uint64_t& Number
+)
+{
+    return std::to_string(Number);
+}
+
 template <typename T>
 const std::string
 TruncateNumber(

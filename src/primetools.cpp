@@ -92,7 +92,7 @@ int main(
 
         const mpz_class n(positionals[1].data());
 
-        auto result = primetools::Factorise(n, 0, factor_db_path, quiet ? primetools::LogQuiet : primetools::FactoriseLog);
+        auto result = primetools::Factorise(n, 0, factor_db_path, quiet ? primetools::LogQuiet : primetools::LogStdOut);
         OutputFactors(result);
     }
     else if (action == "fermat")
@@ -251,7 +251,7 @@ int main(
         }
         else
         {
-            auto result = primetools::TrialDivision(n, threads, blocksize, !noguess, bits, start, end, modulus, true, primetools::TrialDivisionStrategy::MeetInTheMiddle);
+            auto result = primetools::TrialDivision(n, threads, blocksize, !noguess, bits, start, end, modulus, primetools::TrialDivisionStrategy::MeetInTheMiddle, primetools::LogStdOut);
             OutputFactors(result);
         }
     }

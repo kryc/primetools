@@ -16,31 +16,18 @@
 #include "factordb.hpp"
 #include "factors.hpp"
 #include "fermat.hpp"
+#include "logging.hpp"
 #include "pollard.hpp"
 #include "shanks.hpp"
 #include "trial_division.hpp"
 
 namespace primetools {
 
-// Define a log callback type
-using LogCallback = std::function<void(std::string_view)>;
-
 // Factorise a perfect square
 const std::optional<PrimeFactors<mpz_class>>
 FactorisePerfectSquare(
     const mpz_class& N
 );
-
-static inline void FactoriseLog(
-    std::string_view Message
-)
-{
-    std::cout << Message << std::endl;
-}
-
-static inline void LogQuiet(
-    std::string_view Message
-) { return; };
 
 // Try to factorise with increasing complexity
 template <typename T>
@@ -49,7 +36,7 @@ FactoriseNumber(
     const T& N,
     FactorDB<T>& Database,
     const size_t Threads = 0,
-    LogCallback LogFn = FactoriseLog
+    LogCallback LogFn = LogStdOut
 )
 {
     if (N < 2) {
@@ -68,8 +55,8 @@ FactoriseNumber(
 
     // Check for small prime factors
     LogFn("Checking small primes...");
-    const size_t modulus = 223092870;
-    result = TrialDivision(N, 0, modulus, false, 0, T(0), T(modulus * threads), modulus, false, TrialDivisionStrategy::Linear);
+    const size_t modulus = 510510;
+    result = TrialDivision(N, 0, modulus, false, 0, T(0), T(modulus * threads), modulus, TrialDivisionStrategy::Linear, LogFn);
     if (result) {
         factors = result.value();
     }
@@ -164,28 +151,28 @@ FactoriseNumber(
         }        
     }
 
-    // Try using Pollards P-1 with a large B
-    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^30)");
-    constexpr size_t kPollardLargeB = (size_t)(1) << 30;
-    constexpr size_t kPollardLargeBases = 128;
-    resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
-    if (resultpair) {
-        // If either factor is prime, add it to the factors
-        if (primetools::isprime(resultpair->first)) {
-            factors.AddFactor(resultpair->first);
-        }
-        if (primetools::isprime(resultpair->second)) {
-            factors.AddFactor(resultpair->second);
-        }
-    }
+    // // Try using Pollards P-1 with a large B
+    // LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^30)");
+    // constexpr size_t kPollardLargeB = (size_t)(1) << 30;
+    // constexpr size_t kPollardLargeBases = 128;
+    // resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
+    // if (resultpair) {
+    //     // If either factor is prime, add it to the factors
+    //     if (primetools::isprime(resultpair->first)) {
+    //         factors.AddFactor(resultpair->first);
+    //     }
+    //     if (primetools::isprime(resultpair->second)) {
+    //         factors.AddFactor(resultpair->second);
+    //     }
+    // }
 
-    remainder = N / factors.Product();
-    if (primetools::isprime(remainder)) {
-        factors.AddFactor(remainder);
-        return factors;
-    } else if (remainder == 1) {
-        return factors;
-    }
+    // remainder = N / factors.Product();
+    // if (primetools::isprime(remainder)) {
+    //     factors.AddFactor(remainder);
+    //     return factors;
+    // } else if (remainder == 1) {
+    //     return factors;
+    // }
 
     // Check the database for any cached factors before trial division
     if (Database.IsOpen()) {
@@ -209,7 +196,7 @@ FactoriseNumber(
     // Fall back to hybrid trial division (this is not ideal!)
     LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: Trial Division");
     T last_finish = (modulus * threads);
-    result = TrialDivision(remainder, threads, modulus, false, 0, last_finish, T(0), modulus, false, TrialDivisionStrategy::Hybrid);
+    result = TrialDivision(remainder, threads, modulus, false, 0, last_finish, T(0), modulus, TrialDivisionStrategy::Hybrid, LogFn);
     if (result) {
         factors.Update(result.value());
         return factors;
@@ -225,7 +212,7 @@ Factorise(
     const T& N,
     const size_t Threads = 0,
     const std::string_view FactorDBPath = "",
-    LogCallback LogFn = FactoriseLog
+    LogCallback LogFn = LogStdOut
 )
 {
     FactorDB<T> db(FactorDBPath);
