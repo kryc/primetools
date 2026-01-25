@@ -60,7 +60,7 @@ GetPrimesTo(
         size_t right = gLoadedPrimesCount;
         while (left < right) {
             const size_t mid = left + (right - left) / 2;
-            if (gLoadedPrimes[mid] < Upper) {
+            if (gLoadedPrimes[mid] <= Upper) {
                 left = mid + 1;
             } else {
                 right = mid;
@@ -75,7 +75,7 @@ GetPrimesTo(
         size_t right = gCachedPrimesTo.size();
         while (left < right) {
             const size_t mid = left + (right - left) / 2;
-            if (gCachedPrimesTo[mid] < Upper) {
+            if (gCachedPrimesTo[mid] <= Upper) {
                 left = mid + 1;
             } else {
                 right = mid;
