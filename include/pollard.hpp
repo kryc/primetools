@@ -213,7 +213,7 @@ PollardsPMinus1Stage1(
             while (exp <= (Bound / p)) {
                 exp *= p;
             }
-            a = primetools::modexp(a, mpz_class(exp), N);
+            a = primetools::ModExp(a, mpz_class(exp), N);
             d = primetools::gcd(a - 1, N);
             if (d > 1 && d < N) {
                 return std::make_pair(d, N / d);

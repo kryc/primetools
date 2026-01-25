@@ -14,7 +14,6 @@
 #include <gmpxx.h>
 
 #include "euclid.hpp"
-#include "miller_rabin.hpp"
 
 // Convert __uint128_t to string (base 10)
 inline std::string uint128_to_string(__uint128_t value) {
@@ -101,29 +100,56 @@ divmod(
 );
 
 const mpz_class
-modexp(
+ModExp(
     const mpz_class& Base,
     const mpz_class& Exponent,
     const mpz_class& Modulus
 );
 
 const mpz_class
-modexp(
+ModExp(
     const mpz_class& Base,
     const int64_t Exponent,
     const mpz_class& Modulus
 );
+
+template <typename TE, typename TM>
+const __uint128_t
+ModExp(
+    const __uint128_t& Base,
+    const TE& Exponent,
+    const TM& Modulus
+)
+{
+    __uint128_t result = 1;
+    __uint128_t base = Base % Modulus;
+    TE exp = Exponent;
+
+    while (exp > 0) {
+        if (exp % 2 == 1) {
+            result = (result * base) % Modulus;
+        }
+        exp /= 2;
+        base = (base * base) % Modulus;
+    }
+
+    return result;
+}
 
 const mpz_class
 abs(
     const mpz_class& Value
 );
 
-const bool isprime(
+const bool IsPrime(
     const mpz_class& N
 );
 
-const bool isprime(
+const bool IsPrime(
+    const __uint128_t N
+);
+
+const bool IsPrime(
     const uint64_t N
 );
 
@@ -324,7 +350,7 @@ toggle_bit(
 
 static inline
 const size_t
-bit_size(
+BitSize(
     const mpz_class& Value
 )
 {
@@ -334,7 +360,7 @@ bit_size(
 template <typename T>
 static inline
 const size_t
-bit_size(
+BitSize(
     const T& Value
 )
 {
@@ -347,7 +373,7 @@ fits_uint128(
     const mpz_class& Value
 )
 {
-    return bit_size(Value) <= 128;
+    return BitSize(Value) <= 128;
 }
 
 static inline __uint128_t
@@ -463,6 +489,33 @@ IsPerfectSquare(
 {
     uint64_t root = static_cast<uint64_t>(std::sqrt(N));
     return root * root == N || (root + 1) * (root + 1) == N;
+}
+
+static inline
+const bool
+IsEven(
+    const mpz_class& N
+)
+{
+    return mpz_even_p(N.get_mpz_t());
+}
+
+static inline
+const bool
+IsEven(
+    const __uint128_t N
+)
+{
+    return (N & 1) == 0;
+}
+
+static inline
+const bool
+IsEven(
+    const uint64_t N
+)
+{
+    return (N & 1) == 0;
 }
 
 const std::string

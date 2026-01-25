@@ -4,14 +4,18 @@
 #include <bit>
 #include <cstdint>
 
+#include "util.hpp"
+
 namespace primetools
 {
+
+constexpr uint32_t kMiniPRNGDefaultSeed = 0xd34db33f;
 
 template <typename T>
 class MiniPRNG
 {
 public:
-    MiniPRNG(T Seed = 0xd34db33f)
+    MiniPRNG(T Seed = kMiniPRNGDefaultSeed)
     {
         a = 0xf1ea2eed;
         b = c = d = Seed;
@@ -48,6 +52,39 @@ private:
 using MiniPRNG32 = MiniPRNG<uint32_t>;
 using MiniPRNG64 = MiniPRNG<uint64_t>;
 
+template <typename T>
+inline const T
+RandomInRange(
+    MiniPRNG64& Prng,
+    const T Upper
+)
+{
+    if constexpr (std::is_same<T, uint32_t>::value ||
+        std::is_same<T, uint64_t>::value) {
+        return Prng.Next() % Upper;
+    } else if constexpr (std::is_same<T, __uint128_t>::value) {
+        __uint128_t result = Prng.Next();
+        result <<= 64;
+        result |= Prng.Next();
+        return result % Upper;
+    } else if constexpr (std::is_same<T, mpz_class>::value) {
+        // Get the bit size of Upper
+        size_t bits = primetools::BitSize(Upper);
+        // Generate 64-bit numbers until we have enough bits
+        mpz_class result = 0;
+        size_t bits_generated = 0;
+        while (bits_generated < bits) {
+            uint64_t rand64 = Prng.Next();
+            result <<= 64;
+            result |= rand64;
+            bits_generated += 64;
+        }
+        return result % Upper;
+    } else {
+        static_assert(sizeof(T) == 0, "RandomInRange only supports uint32_t and uint64_t types.");
+    }
 }
 
-#endif
+} // namespace primetools
+
+#endif // RANDOM_HPP

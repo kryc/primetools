@@ -114,7 +114,7 @@ public:
     {
         for(;;) {
             const T& candidate = PossiblePrimeGenerator<T>::Next();
-            if (primetools::isprime(candidate)) {
+            if (primetools::IsPrime(candidate)) {
                 return candidate;
             }
         }

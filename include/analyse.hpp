@@ -18,7 +18,7 @@ GuessSizeOfPrimeFactors(
 )
 {
     // Calculate the size of N's constituent primes
-    size_t bits = primetools::bit_size(N) / 2;
+    size_t bits = primetools::BitSize(N) / 2;
 
     // If the size is slightly smaller than a power of two, bump it up
     // ie, if bits is 63, we bump it to 64, 1023 to 1024, etc.

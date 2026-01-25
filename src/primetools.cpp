@@ -287,7 +287,7 @@ int main(
 
         const mpz_class n(positionals[1].data());
 
-        bool is_prime = primetools::isprime(n);
+        bool is_prime = primetools::IsPrime(n);
         std::cout << primetools::TruncateNumber(n) << (is_prime ? " is prime." : " is not prime.") << std::endl;
     }
     else if (action == "calculatefermatiterations")

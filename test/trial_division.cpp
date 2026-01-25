@@ -149,7 +149,6 @@ TEST(TrialDivision, MeetInTheMiddleDoesNotSkipChunks)
         range_lower,
         range_upper,
         modulus,
-        true,     // Status
         primetools::TrialDivisionStrategy::MeetInTheMiddle
     );
 

@@ -40,7 +40,7 @@ GetNthPrime(
         primetools::increment((uint64_t&)candidate, gapword & kWheel30Mask);
         gapword = std::rotr(gapword, kWheel30BitsPerGap);
 
-        if (primetools::isprime(candidate)) {
+        if (primetools::IsPrime(candidate)) {
             index++;
         }
     } while (index <= N);

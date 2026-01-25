@@ -300,7 +300,7 @@ public:
         const __m512i zero = _mm512_setzero_si512();
 
         // Break the dividend into an array of simd u32 limbs (LSW first).
-        size_t dividend_bits = primetools::bit_size(Dividend);
+        size_t dividend_bits = primetools::BitSize(Dividend);
         size_t dividend_words = (dividend_bits + 31) / 32;
 
         std::array<uint32_t, DividendMaxWords> dividend_limbs{};

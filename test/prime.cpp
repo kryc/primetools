@@ -65,8 +65,6 @@ TEST(Prime, GetPrimesTo)
     };
 
     std::vector<TestCase> testCases = {
-        { 1, { } },
-        { 2, { 2 } },
         { 3, { 2, 3 } },
         { 10, { 2, 3, 5, 7 } },
         { 30, { 2, 3, 5, 7, 11, 13, 17, 19, 23, 29 } },
@@ -74,6 +72,12 @@ TEST(Prime, GetPrimesTo)
                  31, 37, 41, 43, 47, 53, 59, 61, 67, 71,
                  73, 79, 83, 89, 97 } }
     };
+
+    auto to1 = primetools::GetPrimesTo(1);
+    EXPECT_EQ(to1.size(), 0);
+    auto to2 = primetools::GetPrimesTo(2);
+    EXPECT_EQ(to2.size(), 1);
+    EXPECT_EQ(to2[0], 2);
 
     for (const auto& testCase : testCases) {
         const auto primes = primetools::GetPrimesTo(testCase.upper);

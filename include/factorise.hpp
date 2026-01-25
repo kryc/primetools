@@ -62,7 +62,7 @@ FactoriseNumber(
     }
 
     T remainder = N / result->Product();
-    if (primetools::isprime(remainder)) {
+    if (primetools::IsPrime(remainder)) {
         factors.AddFactor(remainder);
         return factors;
     } else if (remainder == 1) {
@@ -86,16 +86,16 @@ FactoriseNumber(
     auto resultpair = PollardsPMinus1MT(remainder, threads, kPollardB, kPollardBases);
     if (resultpair) {
         // If either factor is prime, add it to the factors
-        if (primetools::isprime(resultpair->first)) {
+        if (primetools::IsPrime(resultpair->first)) {
             factors.AddFactor(resultpair->first);
         }
-        if (primetools::isprime(resultpair->second)) {
+        if (primetools::IsPrime(resultpair->second)) {
             factors.AddFactor(resultpair->second);
         }
     }
 
     remainder = N / factors.Product();
-    if (primetools::isprime(remainder)) {
+    if (primetools::IsPrime(remainder)) {
         factors.AddFactor(remainder);
         return factors;
     } else if (remainder == 1) {
@@ -109,16 +109,16 @@ FactoriseNumber(
     resultpair = FMMod20PrecompMT(remainder, threads, iterations);
     if (resultpair) {
         // If either factor is prime, add it to the factors
-        if (primetools::isprime(resultpair->first)) {
+        if (primetools::IsPrime(resultpair->first)) {
             factors.AddFactor(resultpair->first);
         }
-        if (primetools::isprime(resultpair->second)) {
+        if (primetools::IsPrime(resultpair->second)) {
             factors.AddFactor(resultpair->second);
         }
     }
 
     remainder = N / factors.Product();
-    if (primetools::isprime(remainder)) {
+    if (primetools::IsPrime(remainder)) {
         factors.AddFactor(remainder);
         return factors;
     } else if (remainder == 1) {
@@ -131,15 +131,15 @@ FactoriseNumber(
         resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, (size_t)(1) << 4);
         if (resultpair) {
             // If either factor is prime, add it to the factors
-            if (primetools::isprime(resultpair->first)) {
+            if (primetools::IsPrime(resultpair->first)) {
                 factors.AddFactor(resultpair->first);
             }
-            if (primetools::isprime(resultpair->second)) {
+            if (primetools::IsPrime(resultpair->second)) {
                 factors.AddFactor(resultpair->second);
             }
 
             remainder = N / factors.Product();
-            if (primetools::isprime(remainder)) {
+            if (primetools::IsPrime(remainder)) {
                 factors.AddFactor(remainder);
                 return factors;
             } else if (remainder == 1) {
@@ -158,16 +158,16 @@ FactoriseNumber(
     // resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
     // if (resultpair) {
     //     // If either factor is prime, add it to the factors
-    //     if (primetools::isprime(resultpair->first)) {
+    //     if (primetools::IsPrime(resultpair->first)) {
     //         factors.AddFactor(resultpair->first);
     //     }
-    //     if (primetools::isprime(resultpair->second)) {
+    //     if (primetools::IsPrime(resultpair->second)) {
     //         factors.AddFactor(resultpair->second);
     //     }
     // }
 
     // remainder = N / factors.Product();
-    // if (primetools::isprime(remainder)) {
+    // if (primetools::IsPrime(remainder)) {
     //     factors.AddFactor(remainder);
     //     return factors;
     // } else if (remainder == 1) {
@@ -186,7 +186,7 @@ FactoriseNumber(
     }
 
     remainder = N / factors.Product();
-    if (primetools::isprime(remainder)) {
+    if (primetools::IsPrime(remainder)) {
         factors.AddFactor(remainder);
         return factors;
     } else if (remainder == 1) {

@@ -102,7 +102,7 @@ int main(
                 std::cerr << "Error: Factor '" << factor_str << "' must be greater than 1." << std::endl;
                 return 1;
             }
-            if (!primetools::isprime(factor)) {
+            if (!primetools::IsPrime(factor)) {
                 std::cerr << "Error: Factor '" << factor_str << "' is not prime." << std::endl;
                 return 1;
             }

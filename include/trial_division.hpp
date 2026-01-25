@@ -45,7 +45,7 @@ GetUpperAndLowerBounds(
     const T& RangeUpper = 0
 )
 {
-    const size_t bits = Bits != 0 ? Bits : (GuessSize ? primetools::GuessSizeOfPrimeFactors(N, true) : primetools::bit_size(N));
+    const size_t bits = Bits != 0 ? Bits : (GuessSize ? primetools::GuessSizeOfPrimeFactors(N, true) : primetools::BitSize(N));
     T lower_bound = GuessSize ? (T(1) << (bits - 1)) + RangeLower : RangeLower;
     T upper_bound = (RangeUpper == 0) 
         ? (GuessSize ? primetools::min(T(1) << bits, T(sqrt(N))) : T(sqrt(N))) 
@@ -83,7 +83,7 @@ AlignCandidateToModulus(
     // Align candidate to be congruent to 1 modulo Modulus
     while (primetools::modulo(Candidate, Modulus) != 1 && Candidate > 1) {
         // Check if we found a factor
-        if (primetools::divides(N, Candidate) && primetools::isprime(Candidate)) {
+        if (primetools::divides(N, Candidate) && primetools::IsPrime(Candidate)) {
             while(primetools::divides(Remainder, Candidate)) {
                 Factors.AddFactor(Candidate);
                 Remainder /= Candidate;
@@ -120,7 +120,7 @@ TrialDivisionRange(
         uint32_t gapword = kWheel30;
         while (starting_candidate <= EndValue)
         {
-            while (primetools::divides(remainder, starting_candidate) && primetools::isprime(starting_candidate)) {
+            while (primetools::divides(remainder, starting_candidate) && primetools::IsPrime(starting_candidate)) {
                 factors.AddFactor(starting_candidate);
                 remainder /= starting_candidate;
                 if (remainder == 1) {
@@ -138,7 +138,7 @@ TrialDivisionRange(
         while (generator.Current() <= EndValue)
         {
             const T& candidate = generator.Next();
-            if (primetools::divides(N, candidate) && primetools::isprime(candidate)) {
+            if (primetools::divides(N, candidate) && primetools::IsPrime(candidate)) {
                 while (primetools::divides(remainder, candidate)) {
                     factors.AddFactor(candidate);
                     remainder /= candidate;
@@ -279,7 +279,7 @@ TrialDivisionLinear(
     
 //     // Get the square root of N as this is our upper bound for trial division
 //     const T upper_bound = T(sqrt(N));
-//     const size_t upper_bound_bits = primetools::bit_size(upper_bound);
+//     const size_t upper_bound_bits = primetools::BitSize(upper_bound);
 
 //     std::cout << "Trying random factorization of " << bits << "-bit primes " << std::endl;
 //     std::cout << "WARNING: This is highly inefficient and not recommended!" << std::endl;
@@ -354,7 +354,7 @@ TrialDivisionLinearWorker(
         // only do trial division up to sqrt(N). We can return early if
         // we have found all other factors and only the prime remainder is left.
         // Also check its above the upper bound to avoid adding twice.
-        if (primetools::isprime(thread_remainder) && thread_remainder > UpperBound) {
+        if (primetools::IsPrime(thread_remainder) && thread_remainder > UpperBound) {
             std::lock_guard<std::mutex> lock(StatusMutex);
             if (!Factors.HasFactor(thread_remainder)) {
                 Factors.AddFactor(thread_remainder);
@@ -445,7 +445,7 @@ TrialDivisionRandomWorker(
         // At most one prime factor greater than sqrt(N) and we usually
         // only do trial division up to sqrt(N). We can return early if
         // we have found all other factors and only the prime remainder is left.
-        if (primetools::isprime(thread_remainder) && thread_remainder > UpperBound) {
+        if (primetools::IsPrime(thread_remainder) && thread_remainder > UpperBound) {
             std::lock_guard<std::mutex> lock(StatusMutex);
             if (!Factors.HasFactor(thread_remainder)) {
                 Factors.AddFactor(thread_remainder);
@@ -541,7 +541,7 @@ TrialDivisionMeetInTheMiddleWorker(
         // At most one prime factor greater than sqrt(N) and we usually
         // only do trial division up to sqrt(N). We can return early if
         // we have found all other factors and only the prime remainder is left.
-        if (primetools::isprime(thread_remainder) && thread_remainder > UpperBound) {
+        if (primetools::IsPrime(thread_remainder) && thread_remainder > UpperBound) {
             std::lock_guard<std::mutex> lock(StatusMutex);
             if (!Factors.HasFactor(thread_remainder)) {
                 Factors.AddFactor(thread_remainder);

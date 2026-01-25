@@ -7,6 +7,7 @@
 #include "gmp.h"
 #include "gmpxx.h"
 
+#include "miller_rabin.hpp"
 #include "util.hpp"
 
 namespace primetools {
@@ -29,7 +30,7 @@ divmod(
 }
 
 const mpz_class
-modexp(
+ModExp(
     const mpz_class& Base,
     const mpz_class& Exponent,
     const mpz_class& Modulus
@@ -46,7 +47,7 @@ modexp(
 }
 
 const mpz_class
-modexp(
+ModExp(
     const mpz_class& Base,
     const int64_t Exponent,
     const mpz_class& Modulus
@@ -75,7 +76,7 @@ abs(
     return Value;
 }
 
-const bool isprime(
+const bool IsPrime(
     const mpz_class& N
 )
 {
@@ -83,12 +84,18 @@ const bool isprime(
     return mpz_probab_prime_p(N.get_mpz_t(), 20) > 0;
 }
 
-const bool isprime(
+const bool IsPrime(
+    const __uint128_t N
+)
+{
+    return MillerRabin(N, 20);
+}
+
+const bool IsPrime(
     const uint64_t N
 )
 {
-    mpz_class n(static_cast<unsigned long>(N));
-    return isprime(n);
+    return MillerRabin(N, 10);
 }
 
 const mpz_class
