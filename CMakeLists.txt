@@ -74,6 +74,14 @@ target_include_directories(primegen PRIVATE
 target_link_libraries(primegen PRIVATE libprimetools gmp gmpxx)
 add_dependencies(primegen libprimetools)
 
+SET(MERSENNE_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/mersenne.cpp)
+add_executable(mersenne ${MERSENNE_SOURCES})
+target_include_directories(mersenne PRIVATE
+                            ${CMAKE_CURRENT_SOURCE_DIR}/src/
+                            ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_link_libraries(mersenne PRIVATE libprimetools gmp gmpxx)
+add_dependencies(mersenne libprimetools)
+
 # Tests
 file(GLOB_RECURSE TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
 add_executable(unittest EXCLUDE_FROM_ALL ${TEST_SOURCES})

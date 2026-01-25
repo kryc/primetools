@@ -70,6 +70,47 @@ ToString(
     return std::to_string(Number);
 }
 
+static inline std::string
+ToSuperScriptDigit(
+    const size_t Digit
+)
+{
+    static const std::array<std::string, 10> superscript_digits = {"⁰","¹","²","³","⁴","⁵","⁶","⁷","⁸","⁹"};
+    if (Digit > 9) {
+        throw std::invalid_argument("Digit must be in range 0-9");
+    }
+    return superscript_digits[Digit];
+}
+
+template <typename T>
+static inline std::string
+ToSuperScript(
+    const T& Number
+)
+{
+    T n = Number;
+    std::string result;
+    size_t digit;
+    while (n > 9) {
+        if constexpr (std::is_same_v<T, mpz_class>) {
+            mpz_class remainder;
+            mpz_fdiv_r_ui(remainder.get_mpz_t(), n.get_mpz_t(), 10);
+            digit = remainder.get_ui();
+        } else {
+            digit = n % 10;
+        }
+        result = ToSuperScriptDigit(digit) + result;
+        n /= 10;
+    }
+    if constexpr (std::is_same_v<T, mpz_class>) {
+        digit = n.get_ui();
+    } else {
+        digit = n;
+    }
+    result = ToSuperScriptDigit(digit) + result;
+    return result;
+}
+
 template <typename T>
 const std::string
 TruncateNumber(

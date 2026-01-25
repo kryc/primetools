@@ -44,6 +44,7 @@ FactoriseNumber(
     }
 
     PrimeFactors<T> factors;
+    T remainder = N;
     size_t threads = Threads > 0 ? Threads : std::thread::hardware_concurrency();
 
     // Check for perfect square
@@ -59,14 +60,13 @@ FactoriseNumber(
     result = TrialDivision(N, 0, modulus, false, 0, T(0), T(modulus * threads), modulus, TrialDivisionStrategy::Linear, LogFn);
     if (result) {
         factors = result.value();
-    }
-
-    T remainder = N / result->Product();
-    if (primetools::IsPrime(remainder)) {
-        factors.AddFactor(remainder);
-        return factors;
-    } else if (remainder == 1) {
-        return factors;
+        remainder = N / result->Product();
+        if (primetools::IsPrime(remainder)) {
+            factors.AddFactor(remainder);
+            return factors;
+        } else if (remainder == 1) {
+            return factors;
+        }
     }
 
     // Do a quick lookup of the remainder in the factor DB
@@ -196,13 +196,31 @@ FactoriseNumber(
     // Fall back to hybrid trial division (this is not ideal!)
     LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: Trial Division");
     T last_finish = (modulus * threads);
-    result = TrialDivision(remainder, threads, modulus, false, 0, last_finish, T(0), modulus, TrialDivisionStrategy::Hybrid, LogFn);
+    result = TrialDivision(remainder, threads, modulus, false, 0, last_finish, T(0), modulus, TrialDivisionStrategy::MeetInTheMiddle, LogFn);
     if (result) {
         factors.Update(result.value());
         return factors;
     }
 
     return std::nullopt;
+}
+
+// Try to factorise with increasing complexity
+template <typename T>
+const std::optional<PrimeFactors<T>>
+Factorise(
+    const T& N,
+    const size_t Threads = 0,
+    FactorDB<T>& Database = FactorDB<T>(),
+    LogCallback LogFn = LogStdOut
+)
+{
+    auto factors = FactoriseNumber<T>(N, Database, Threads, LogFn);
+    if (factors && Database.IsOpen()) {
+        LogFn("Storing factors in FactorDB...");
+        Database.AddFactors(factors.value());
+    }
+    return factors;
 }
 
 // Try to factorise with increasing complexity
