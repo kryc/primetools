@@ -23,6 +23,13 @@
 
 namespace primetools {
 
+constexpr size_t kSmallPminus1B = (size_t)(1) << 20;
+constexpr size_t kSmallPminus1Bases = 128;
+constexpr size_t kLargePminus1B = (size_t)(1) << 32;
+constexpr size_t kLargePminus1Bases = 32;
+constexpr size_t kSmallWheelModulus = 510510;
+constexpr size_t kLargeWheelModulus = 6469693230;
+
 // Factorise a perfect square
 const std::optional<PrimeFactors<mpz_class>>
 FactorisePerfectSquare(
@@ -56,8 +63,7 @@ FactoriseNumber(
 
     // Check for small prime factors
     LogFn("Checking small primes...");
-    const size_t modulus = 510510;
-    result = TrialDivision(N, 0, modulus, false, 0, T(0), T(modulus * threads), modulus, TrialDivisionStrategy::Linear, LogFn);
+    result = TrialDivision(N, 0, kSmallWheelModulus, false, 0, T(0), T(kSmallWheelModulus * threads), kSmallWheelModulus, TrialDivisionStrategy::Linear, LogFn);
     if (result) {
         factors = result.value();
         remainder = N / result->Product();
@@ -81,8 +87,8 @@ FactoriseNumber(
 
     // Try using Pollards P-1 with a small B
     LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^20)");
-    constexpr size_t kPollardB = (size_t)(1) << 20;
-    constexpr size_t kPollardBases = 128;
+    constexpr size_t kPollardB = kSmallPminus1B;
+    constexpr size_t kPollardBases = kSmallPminus1Bases;
     auto resultpair = PollardsPMinus1MT(remainder, threads, kPollardB, kPollardBases);
     if (resultpair) {
         // If either factor is prime, add it to the factors
@@ -152,27 +158,27 @@ FactoriseNumber(
     }
 
     // // Try using Pollards P-1 with a large B
-    // LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^30)");
-    // constexpr size_t kPollardLargeB = (size_t)(1) << 30;
-    // constexpr size_t kPollardLargeBases = 128;
-    // resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
-    // if (resultpair) {
-    //     // If either factor is prime, add it to the factors
-    //     if (primetools::IsPrime(resultpair->first)) {
-    //         factors.AddFactor(resultpair->first);
-    //     }
-    //     if (primetools::IsPrime(resultpair->second)) {
-    //         factors.AddFactor(resultpair->second);
-    //     }
-    // }
+    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^32)");
+    constexpr size_t kPollardLargeB = kLargePminus1B;
+    constexpr size_t kPollardLargeBases = kLargePminus1Bases;
+    resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
+    if (resultpair) {
+        // If either factor is prime, add it to the factors
+        if (primetools::IsPrime(resultpair->first)) {
+            factors.AddFactor(resultpair->first);
+        }
+        if (primetools::IsPrime(resultpair->second)) {
+            factors.AddFactor(resultpair->second);
+        }
+    }
 
-    // remainder = N / factors.Product();
-    // if (primetools::IsPrime(remainder)) {
-    //     factors.AddFactor(remainder);
-    //     return factors;
-    // } else if (remainder == 1) {
-    //     return factors;
-    // }
+    remainder = N / factors.Product();
+    if (primetools::IsPrime(remainder)) {
+        factors.AddFactor(remainder);
+        return factors;
+    } else if (remainder == 1) {
+        return factors;
+    }
 
     // Check the database for any cached factors before trial division
     if (Database.IsOpen()) {
@@ -195,8 +201,7 @@ FactoriseNumber(
 
     // Fall back to hybrid trial division (this is not ideal!)
     LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: Trial Division");
-    T last_finish = (modulus * threads);
-    result = TrialDivision(remainder, threads, modulus, false, 0, last_finish, T(0), modulus, TrialDivisionStrategy::MeetInTheMiddle, LogFn);
+    result = TrialDivision(remainder, threads, 0, false, 0, T(0), T(0), kLargeWheelModulus, TrialDivisionStrategy::MeetInTheMiddle, LogFn);
     if (result) {
         factors.Update(result.value());
         return factors;
@@ -250,6 +255,28 @@ Factorise(
     return factors;
 }
 
+inline static void
+PreCacheWheelAndPrimes(
+    void
+)
+{
+    GetWheelGapsForModulus(kLargeWheelModulus);
+    GetPrimesTo(kLargePminus1B);
 }
+
+inline static void
+PreCacheWheelAndPrimesInNewThread(
+    void
+)
+{
+    std::thread([]() {
+        GetWheelGapsForModulus(kLargeWheelModulus);
+    }).detach();
+    std::thread([]() {
+        GetPrimesTo(kLargePminus1B);
+    }).detach();
+}
+
+} // namespace primetools
 
 #endif // FACTORISE_HPP

@@ -53,6 +53,8 @@ int main(
         }
     }
 
+    primetools::PreCacheWheelAndPrimesInNewThread();
+
     std::cerr << "Finding prime factors for Mersenne numbers up to 2" << primetools::ToSuperScript(max_power) << "-1" << std::endl;
     for (mpz_class p = 2; p <= max_power; p++) {
         mpz_class mersenne;

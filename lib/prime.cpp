@@ -10,6 +10,7 @@
 
 #include <sys/mman.h>
 
+#include "eratosthenes.hpp"
 #include "prime.hpp"
 
 namespace primetools {
@@ -46,13 +47,11 @@ GetSmallPrimes(
     return kSmallPrimes;
 }
 
-std::span<const uint64_t>
-GetPrimesTo(
+static const std::optional<std::span<const uint64_t>>
+GetPrimesToFromCache(
     const uint64_t Upper
 )
 {
-    std::lock_guard<std::mutex> lock(gCachedPrimesMutex);
-
     // Try the loaded primes first
     if (gLoadedPrimes != nullptr && Upper <= gLoadedPrimesLimit) {
         // Do a binary search to find the right size
@@ -84,7 +83,23 @@ GetPrimesTo(
         return std::span<const uint64_t>(gCachedPrimesTo.data(), left);
     }
 
-    gCachedPrimesTo = GetPrimesInRange<uint64_t>(1, Upper);
+    return std::nullopt;
+}
+
+std::span<const uint64_t>
+GetPrimesTo(
+    const uint64_t Upper
+)
+{
+    std::lock_guard<std::mutex> lock(gCachedPrimesMutex);
+
+    const auto cached = GetPrimesToFromCache(Upper);
+    if (cached) {
+        return cached.value();
+    }
+
+    // Use sieve to generate primes up to Upper
+    gCachedPrimesTo = SieveOfEratosthenes<uint64_t>(Upper);
     gCachedPrimesToLimit = Upper;
     return gCachedPrimesTo;
 }
