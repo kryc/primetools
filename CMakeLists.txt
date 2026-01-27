@@ -82,6 +82,14 @@ target_include_directories(mersenne PRIVATE
 target_link_libraries(mersenne PRIVATE libprimetools gmp gmpxx)
 add_dependencies(mersenne libprimetools)
 
+SET(FIBONACCI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/fibonacci.cpp)
+add_executable(fibonacci ${FIBONACCI_SOURCES})
+target_include_directories(fibonacci PRIVATE
+                            ${CMAKE_CURRENT_SOURCE_DIR}/src/
+                            ${CMAKE_CURRENT_SOURCE_DIR}/include/)
+target_link_libraries(fibonacci PRIVATE libprimetools gmp gmpxx)
+add_dependencies(fibonacci libprimetools)
+
 # Tests
 file(GLOB_RECURSE TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
 add_executable(unittest EXCLUDE_FROM_ALL ${TEST_SOURCES})
