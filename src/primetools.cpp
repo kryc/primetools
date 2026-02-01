@@ -95,6 +95,23 @@ int main(
         auto result = primetools::Factorise(n, 0, factor_db_path, quiet ? primetools::LogQuiet : primetools::LogStdOut);
         OutputFactors(result);
     }
+    else if (action == "quadratic")
+    {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " quadratic <number>" << std::endl;
+            return 1;
+        }
+
+        if (!primetools::is_numeric(positionals[1])) {
+            std::cerr << "Error: Input is not a valid number." << std::endl;
+            return 1;
+        }
+
+        const mpz_class n(positionals[1].data());
+        std::cout << "Quadratic Sieve factorization of " << primetools::TruncateNumber(n) << std::endl;
+        auto result = primetools::QuadraticSieveFactor(n);
+        OutputFactors(result);
+    }
     else if (action == "fermat")
     {
         if (argc < 3) {

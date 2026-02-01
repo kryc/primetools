@@ -92,6 +92,9 @@ add_dependencies(fibonacci libprimetools)
 
 # Tests
 file(GLOB_RECURSE TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp)
+
+enable_testing()
+
 add_executable(unittest EXCLUDE_FROM_ALL ${TEST_SOURCES})
 target_include_directories(unittest PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/test/

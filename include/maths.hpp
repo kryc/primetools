@@ -12,6 +12,20 @@
 
 namespace primetools {
 
+// Natural log of an mpz_class without converting the whole value to a decimal string.
+double
+ln_mpz(
+    const mpz_class& N
+);
+
+// Legendre symbol (a|p) for odd prime p.
+// Returns 1 if a is a quadratic residue mod p, -1 if non-residue, 0 if a ≡ 0 (mod p).
+int
+legendre_symbol(
+    uint64_t a,
+    uint64_t p
+);
+
 static inline __uint128_t
 AddMod(
     const __uint128_t A,

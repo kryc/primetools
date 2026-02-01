@@ -31,6 +31,20 @@ public:
         m_FactorCounts[Factor] += Count;
     }
 
+    template <typename T2>
+    void AddFactorAnyType(
+        const T2& Factor,
+        const size_t Count = 1
+    ) {
+        if constexpr (std::is_same_v<T, T2>) {
+            AddFactor(Factor, Count);
+            return;
+        } else {
+            T converted = primetools::ConvertType<T>(Factor);
+            AddFactor(converted, Count);
+        }
+    }
+
     void Update(
         const PrimeFactors<T>& Other
     ) {

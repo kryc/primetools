@@ -240,7 +240,10 @@ ConvertType(
         }
     } else if constexpr (std::is_same_v<T1, __uint128_t>) {
         if constexpr (std::is_same_v<T2, mpz_class>) {
-            if (Value > std::numeric_limits<T1>::max()) {
+            if (mpz_sgn(Value.get_mpz_t()) < 0) {
+                throw std::overflow_error("ConvertType: Value negative for target type");
+            }
+            if (!fits_uint128(Value)) {
                 throw std::overflow_error("ConvertType: Value too large for target type");
             }
             return MpzToUint128(Value);

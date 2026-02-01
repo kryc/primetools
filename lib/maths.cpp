@@ -1,6 +1,48 @@
 #include "maths.hpp"
 
+#include <cmath>
+#include <limits>
+
 namespace primetools {
+
+double
+ln_mpz(
+    const mpz_class& N
+)
+{
+    // Avoid infinities/NaNs: some build flags treat them as UB.
+    // Callers in this codebase only use ln_mpz for N > 1.
+    if (N <= 0) {
+        return 0.0;
+    }
+    long exp2 = 0;
+    const double mantissa = mpz_get_d_2exp(&exp2, N.get_mpz_t());
+    // N = mantissa * 2^exp2 with mantissa in [0.5, 1).
+    return std::log(mantissa) + static_cast<double>(exp2) * std::log(2.0);
+}
+
+int
+legendre_symbol(
+    uint64_t a,
+    uint64_t p
+)
+{
+    if (p == 2) {
+        return (a & 1u) ? 1 : 0;
+    }
+    a %= p;
+    if (a == 0) {
+        return 0;
+    }
+    const uint64_t ls = static_cast<uint64_t>(primetools::ModExp(static_cast<__uint128_t>(a), (p - 1) / 2, p));
+    if (ls == 1) {
+        return 1;
+    }
+    if (ls == p - 1) {
+        return -1;
+    }
+    return 0;
+}
 
 const mpz_class
 divmod(

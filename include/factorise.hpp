@@ -18,6 +18,7 @@
 #include "fermat.hpp"
 #include "logging.hpp"
 #include "pollard.hpp"
+#include "quadratic.hpp"
 #include "shanks.hpp"
 #include "trial_division.hpp"
 
@@ -33,6 +34,8 @@ constexpr size_t kSmallWheelModulus = 510510;
 constexpr size_t kLargeWheelModulus = 223092870;
 constexpr size_t kFermatMaxIterations2 = 14;
 constexpr size_t kFermatMaxIterations = (size_t)(1) << kFermatMaxIterations2;
+constexpr size_t kPollardsRhoIterations2 = 5;
+constexpr size_t kBrentPollardsRhoIterations = (size_t)(1) << kPollardsRhoIterations2;
 
 // Factorise a perfect square
 template <typename T>
@@ -190,8 +193,9 @@ FactoriseNumber(
     // Use Pollard's rho algorithm
     LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Brent-Pollard's Rho");
     for (;;) {
-        resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, (size_t)(1) << 4);
+        resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, kBrentPollardsRhoIterations);
         if (resultpair) {
+            std::cerr << "Brent-Pollard's Rho found factors: " << resultpair->first << " * " << resultpair->second << std::endl;
             // If either factor is prime, add it to the factors
             if (primetools::IsPrime(resultpair->first)) {
                 factors.AddFactor(resultpair->first);
@@ -260,6 +264,27 @@ FactoriseNumber(
 
     // Validate current factorization
     ValidateFactorizationOrThrow(N, factors);
+
+    // Try quadratic sieve
+    LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Quadratic Sieve");
+    auto quadresult = QuadraticSieveFactor(remainder);
+    if (quadresult) {
+        // If either factor is prime, add it to the factors
+        if (primetools::IsPrime(quadresult->first)) {
+            factors.AddFactorAnyType(quadresult->first);
+        }
+        if (primetools::IsPrime(quadresult->second)) {
+            factors.AddFactorAnyType(quadresult->second);
+        }
+
+        remainder = N / factors.Product();
+        if (primetools::IsPrime(remainder)) {
+            factors.AddFactorAnyType(remainder);
+            return factors;
+        } else if (remainder == 1) {
+            return factors;
+        }
+    }
 
     // Fall back to hybrid trial division (this is not ideal!)
     LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Trial Division");
