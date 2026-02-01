@@ -1,6 +1,7 @@
 #ifndef POLLARDS_RHO_HPP
 #define POLLARDS_RHO_HPP
 
+#include <algorithm>
 #include <atomic>
 #include <functional>
 #include <mutex>
@@ -84,26 +85,43 @@ BrentPollardsRho(
     const T n,
     const size_t block_size = DefaultM,
     const T starting_value = DefaultStartingValue,
-    const size_t max_iterations = DefaultMaxIterations
+    // NOTE: This is a cap on polynomial evaluations ("rho steps"), not on Brent cycle-doublings.
+    // Doubling-based iteration limits grow the work exponentially and are easy to misuse.
+    const size_t max_steps = DefaultMaxIterations
 )
 {
     T current = starting_value;
     T cycle_point = current;
     T gcd_result = 1;
     T product = 1;
-    T block_counter, saved_point, diff;
-    T cycle_length = 1;
+    T saved_point = current;
+    T diff;
 
-    for (size_t iter = 0; iter < max_iterations && gcd_result == 1; ++iter) {
+    size_t cycle_length = 1;
+    size_t steps = 0;
+
+    const auto f = [&n](const T& x) -> T {
+        return (x * x - 1) % n;
+    };
+
+    while (steps < max_steps && gcd_result == 1) {
         cycle_point = current;
-        for (size_t j = 0; j < cycle_length; ++j) {
-            current = (current * current - 1) % n;
+
+        for (size_t j = 0; j < cycle_length && steps < max_steps; ++j) {
+            current = f(current);
+            ++steps;
         }
-        block_counter = 0;
-        while (block_counter < cycle_length && gcd_result == 1) {
+
+        size_t block_counter = 0;
+        product = 1;
+
+        while (block_counter < cycle_length && gcd_result == 1 && steps < max_steps) {
             saved_point = current;
-            for (size_t m = 0; m < block_size && gcd_result == 1; ++m) {
-                current = (current * current - 1) % n;
+
+            const size_t this_block = std::min(block_size, cycle_length - block_counter);
+            for (size_t m = 0; m < this_block && gcd_result == 1 && steps < max_steps; ++m) {
+                current = f(current);
+                ++steps;
                 diff = (current > cycle_point) ? (current - cycle_point) : (cycle_point - current); //Avoid the abs call
                 // diff = primetools::abs(diff);
                 // mpz_abs(diff.get_mpz_t(), diff.get_mpz_t());
@@ -111,20 +129,23 @@ BrentPollardsRho(
             }
             gcd_result = primetools::Gcd(product, n);
             // mpz_gcd(gcd_result.get_mpz_t(), product.get_mpz_t(), n.get_mpz_t());
-            block_counter += block_size;
+            block_counter += this_block;
         }
         cycle_length *= 2;
     }
 
     if (gcd_result == n) {
+        // Standard Brent fallback: walk forward from the saved point until a non-trivial gcd appears.
+        // Use gcd(|x - ys|, n) rather than reusing the accumulated product.
         do {
-            saved_point = (saved_point * saved_point - 1) % n;
+            if (steps >= max_steps) {
+                break;
+            }
+            saved_point = f(saved_point);
+            ++steps;
+
             diff = (cycle_point > saved_point) ? (cycle_point - saved_point) : (saved_point - cycle_point); //Avoid the abs call
-            // diff = primetools::abs(diff);
-            // mpz_abs(diff.get_mpz_t(), diff.get_mpz_t());
-            product = (product * diff) % n;
-            gcd_result = primetools::Gcd(product, n);
-            // mpz_gcd(gcd_result.get_mpz_t(), product.get_mpz_t(), n.get_mpz_t());
+            gcd_result = primetools::Gcd(diff, n);
         } while (gcd_result == 1);
     }
 
@@ -141,7 +162,7 @@ BrentPollardsRhoMT(
     const T N,
     const size_t Threads,
     const size_t M = DefaultM,
-    const size_t MaxIterations = DefaultMaxIterations
+    const size_t MaxSteps = DefaultMaxIterations
 )
 {
     std::vector<std::thread> thread_pool;
@@ -165,7 +186,7 @@ BrentPollardsRhoMT(
     for (size_t thread_id = 0; thread_id < num_threads; ++thread_id) {
         const T thread_starting_value = starting_values[thread_id];
         thread_pool.emplace_back([&, thread_starting_value]() {
-            auto thread_result = BrentPollardsRho<T>(N, M, thread_starting_value, MaxIterations);
+            auto thread_result = BrentPollardsRho<T>(N, M, thread_starting_value, MaxSteps);
             if (thread_result && !found.exchange(true)) {
                 std::lock_guard<std::mutex> lock(result_mutex);
                 result = thread_result;

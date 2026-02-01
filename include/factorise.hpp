@@ -34,8 +34,8 @@ constexpr size_t kSmallWheelModulus = 510510;
 constexpr size_t kLargeWheelModulus = 223092870;
 constexpr size_t kFermatMaxIterations2 = 14;
 constexpr size_t kFermatMaxIterations = (size_t)(1) << kFermatMaxIterations2;
-constexpr size_t kPollardsRhoIterations2 = 5;
-constexpr size_t kBrentPollardsRhoIterations = (size_t)(1) << kPollardsRhoIterations2;
+constexpr size_t kBrentPollardsRhoMaxSteps2 = 25;
+constexpr size_t kBrentPollardsRhoMaxSteps = (size_t)(1) << kBrentPollardsRhoMaxSteps2;
 
 // Factorise a perfect square
 template <typename T>
@@ -193,7 +193,7 @@ FactoriseNumber(
     // Use Pollard's rho algorithm
     LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Brent-Pollard's Rho");
     for (;;) {
-        resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, kBrentPollardsRhoIterations);
+        resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, kBrentPollardsRhoMaxSteps);
         if (resultpair) {
             std::cerr << "Brent-Pollard's Rho found factors: " << resultpair->first << " * " << resultpair->second << std::endl;
             // If either factor is prime, add it to the factors
