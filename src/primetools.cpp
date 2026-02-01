@@ -150,6 +150,7 @@ int main(
 
         const mpz_class n(positionals[1].data());
         const bool pollard = flags.find("pollard") != flags.end();
+        const size_t threads = flags.find("threads") != flags.end() ? std::stoul(std::string(flags["threads"])) : 1;
 
         if (pollard) {
             std::cout << "Pollard's rho factorization of " << primetools::TruncateNumber(n) << std::endl;
@@ -158,8 +159,13 @@ int main(
         }
         else {
             std::cout << "Brent-Pollard's rho factorization of " << primetools::TruncateNumber(n) << std::endl;
-            auto result = primetools::BrentPollardsRho(n);
-            OutputFactors(result);
+            if (threads > 1) {
+                auto result = primetools::BrentPollardsRhoMT(n, threads);
+                OutputFactors(result);    
+            } else {
+                auto result = primetools::BrentPollardsRho(n);
+                OutputFactors(result);
+            }
         }
     }
     else if (action == "pminus1" || action == "p-1" || action == "pollardp1" || action == "p1" || action == "pollardp-1")
