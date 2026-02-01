@@ -61,7 +61,7 @@ GetPrimesInRange(
     }
 
     std::vector<T> primes;
-    PrimeGenerator<T> generator(9699690);
+    PrimeGenerator<T> generator(510510);
 
     for (;;) {
         const T prime = generator.Next();

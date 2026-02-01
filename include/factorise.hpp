@@ -30,7 +30,7 @@ constexpr size_t kLargePminus1B2 = 28;
 constexpr size_t kLargePminus1B = (size_t)(1) << kLargePminus1B2;
 constexpr size_t kLargePminus1Bases = 32;
 constexpr size_t kSmallWheelModulus = 510510;
-constexpr size_t kLargeWheelModulus = 6469693230;
+constexpr size_t kLargeWheelModulus = 223092870;
 constexpr size_t kFermatMaxIterations2 = 14;
 constexpr size_t kFermatMaxIterations = (size_t)(1) << kFermatMaxIterations2;
 
@@ -263,7 +263,14 @@ FactoriseNumber(
 
     // Fall back to hybrid trial division (this is not ideal!)
     LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Trial Division");
-    result = TrialDivision(remainder, threads, 0, false, 0, T(0), T(0), kLargeWheelModulus, TrialDivisionStrategy::MeetInTheMiddle, LogFn);
+
+    // Define a lambda that logs via our LogFn
+    auto factorise_log_fn = [&](std::string_view message) {
+        std::string newmessage = factors.GetString() + " R: " + ToString(remainder) + " A: Trial Division - " + std::string(message);
+        LogFn(newmessage);
+    };
+
+    result = TrialDivision(remainder, threads, 0, false, 0, T(0), T(0), kLargeWheelModulus, TrialDivisionStrategy::MeetInTheMiddle, factorise_log_fn);
     if (result) {
         factors.Update(result.value());
         return factors;
