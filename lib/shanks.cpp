@@ -58,7 +58,7 @@ SQUFOF(
                     mpz_class P_prime_curr_val = primetools::floor_div(P0 + P_prime_prev, Q_prime_curr_red) * Q_prime_curr_red - P_prime_prev;
 
                     if (P_prime_curr_val == P_prime_prev) { // Termination condition for reduction
-                        mpz_class factor = primetools::gcd(P_prime_curr_val, N);
+                        mpz_class factor = primetools::Gcd(P_prime_curr_val, N);
                         if (factor > 1 && factor < N) {
                             return PrimeFactors<mpz_class>::FromPair(factor, N / factor); // Factor found!
                         }

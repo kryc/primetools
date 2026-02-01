@@ -7,6 +7,7 @@
 
 #include <gmpxx.h>
 
+#include "maths.hpp"
 #include "primegenerator.hpp"
 #include "util.hpp"
 #include "wheel30.hpp"

@@ -68,7 +68,7 @@ PollardsRho(
         y = Polynomial(Polynomial(y, N), N);
         T z = (x > y) ? (x - y) : (y - x); //Avoid the abs call
         // z = primetools::abs(z);
-        d = primetools::gcd(z, N);
+        d = primetools::Gcd(z, N);
 
         if (d > 1 && d < N) {
             return std::make_pair(d, N / d);
@@ -109,7 +109,7 @@ BrentPollardsRho(
                 // mpz_abs(diff.get_mpz_t(), diff.get_mpz_t());
                 product = (product * diff) % n;
             }
-            gcd_result = primetools::gcd(product, n);
+            gcd_result = primetools::Gcd(product, n);
             // mpz_gcd(gcd_result.get_mpz_t(), product.get_mpz_t(), n.get_mpz_t());
             block_counter += block_size;
         }
@@ -123,7 +123,7 @@ BrentPollardsRho(
             // diff = primetools::abs(diff);
             // mpz_abs(diff.get_mpz_t(), diff.get_mpz_t());
             product = (product * diff) % n;
-            gcd_result = primetools::gcd(product, n);
+            gcd_result = primetools::Gcd(product, n);
             // mpz_gcd(gcd_result.get_mpz_t(), product.get_mpz_t(), n.get_mpz_t());
         } while (gcd_result == 1);
     }
@@ -202,7 +202,7 @@ PollardsPMinus1Stage1(
         // The base "a" does not need to be prime; it only needs to be coprime to n.
         T a = T(2) + base_index;
 
-        T d = primetools::gcd<T>(a, N);
+        T d = primetools::Gcd<T>(a, N);
         if (d > 1 && d < N) {
             return std::make_pair(d, N / d);
         }
@@ -214,7 +214,7 @@ PollardsPMinus1Stage1(
                 exp *= p;
             }
             a = primetools::ModExp(a, mpz_class(exp), N);
-            d = primetools::gcd<T>(a - 1, N);
+            d = primetools::Gcd<T>(a - 1, N);
             if (d > 1 && d < N) {
                 return std::make_pair(d, N / d);
             }

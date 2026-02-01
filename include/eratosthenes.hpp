@@ -6,6 +6,7 @@
 
 #include <gmpxx.h>
 
+#include "maths.hpp"
 #include "util.hpp"
 
 namespace primetools {

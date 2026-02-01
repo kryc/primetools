@@ -9,7 +9,9 @@
 
 #include <gmpxx.h>
 
+#include "maths.hpp"
 #include "util.hpp"
+
 namespace primetools {
 
 // A placeholder for an efficient prime factor storage structure
