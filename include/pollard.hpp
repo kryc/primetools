@@ -23,7 +23,7 @@ namespace {
     // The default max iterations is 2^32
     static const size_t kPollardsRhoDefaultMaxIterations = (size_t)(1) << 32;
     // The default starting value is 2
-    static const mpz_class kPollardsRhoDefaultStartingValue = 2;
+    static const uint64_t kPollardsRhoDefaultStartingValue = 2;
     // The deafult M is 64
     static const size_t kPollardsRhoDefaultM = 64;
 
