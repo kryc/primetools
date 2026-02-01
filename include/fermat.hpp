@@ -55,11 +55,8 @@ CalculateFermatIterations(
         mpz_class root4;
         mpz_root(root4.get_mpz_t(), N.get_mpz_t(), 4);
         return static_cast<size_t>(root4.get_ui()) + 1;
-    } else if constexpr (std::is_same_v<T, __uint128_t>) {
-        __uint128_t root4 = static_cast<__uint128_t>(std::cbrt(std::cbrt(static_cast<long double>(N))));
-        return static_cast<size_t>(root4) + 1;
     } else {
-        uint64_t root4 = static_cast<uint64_t>(std::cbrt(std::cbrt(static_cast<long double>(N))));
+        T root4 = primetools::Root(N, 4);
         return static_cast<size_t>(root4) + 1;
     }
 }

@@ -31,6 +31,8 @@ constexpr size_t kLargePminus1B = (size_t)(1) << kLargePminus1B2;
 constexpr size_t kLargePminus1Bases = 32;
 constexpr size_t kSmallWheelModulus = 510510;
 constexpr size_t kLargeWheelModulus = 6469693230;
+constexpr size_t kFermatMaxIterations2 = 14;
+constexpr size_t kFermatMaxIterations = (size_t)(1) << kFermatMaxIterations2;
 
 // Factorise a perfect square
 template <typename T>
@@ -134,7 +136,7 @@ FactoriseNumber(
     }
 
     // Try using Pollards P-1 with a small B
-    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: P-1 (B=2^" + std::to_string(kSmallPminus1B2) + ")");
+    LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: P-1 (B=2^" + std::to_string(kSmallPminus1B2) + ")");
     constexpr size_t kPollardB = kSmallPminus1B;
     constexpr size_t kPollardBases = kSmallPminus1Bases;
     auto resultpair = PollardsPMinus1MT(remainder, threads, kPollardB, kPollardBases);
@@ -160,9 +162,9 @@ FactoriseNumber(
     ValidateFactorizationOrThrow(N, factors);
 
     // Use Fermat's factorization method up to 2^24 iterations
-    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: FMMod20Precomp");
+    LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: FMMod20Precomp");
     size_t iterations = CalculateFermatIterations(N);
-    iterations = std::min(iterations, (size_t)8192*2);
+    iterations = std::min(iterations, kFermatMaxIterations);
     resultpair = FMMod20PrecompMT(remainder, threads, iterations);
     if (resultpair) {
         // If either factor is prime, add it to the factors
@@ -186,7 +188,7 @@ FactoriseNumber(
     ValidateFactorizationOrThrow(N, factors);
 
     // Use Pollard's rho algorithm
-    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: Brent-Pollard's Rho");
+    LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Brent-Pollard's Rho");
     for (;;) {
         resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, (size_t)(1) << 4);
         if (resultpair) {
@@ -205,14 +207,14 @@ FactoriseNumber(
             } else if (remainder == 1) {
                 return factors;
             }
-            LogFn("F: " + factors.GetString());
+            LogFn(factors.GetString());
         } else {
             break;
         }        
     }
 
     // // Try using Pollards P-1 with a large B
-    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: P-1 (B=2^" + std::to_string(kLargePminus1B2) + ")");
+    LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: P-1 (B=2^" + std::to_string(kLargePminus1B2) + ")");
     constexpr size_t kPollardLargeB = kLargePminus1B;
     constexpr size_t kPollardLargeBases = kLargePminus1Bases;
     resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
@@ -260,7 +262,7 @@ FactoriseNumber(
     ValidateFactorizationOrThrow(N, factors);
 
     // Fall back to hybrid trial division (this is not ideal!)
-    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: Trial Division");
+    LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Trial Division");
     result = TrialDivision(remainder, threads, 0, false, 0, T(0), T(0), kLargeWheelModulus, TrialDivisionStrategy::MeetInTheMiddle, LogFn);
     if (result) {
         factors.Update(result.value());

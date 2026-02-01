@@ -12,6 +12,54 @@
 
 namespace primetools {
 
+static inline __uint128_t
+AddMod(
+    const __uint128_t A,
+    const __uint128_t B,
+    const __uint128_t Modulus
+)
+{
+    if (Modulus == 0) {
+        throw std::invalid_argument("AddMod: Modulus must be non-zero");
+    }
+
+    const __uint128_t a = A % Modulus;
+    const __uint128_t b = B % Modulus;
+
+    // Compute (a + b) % Modulus without overflowing __uint128_t
+    if (a >= Modulus - b) {
+        return a - (Modulus - b);
+    }
+    return a + b;
+}
+
+static inline __uint128_t
+MulMod(
+    __uint128_t A,
+    __uint128_t B,
+    const __uint128_t Modulus
+)
+{
+    if (Modulus == 0) {
+        throw std::invalid_argument("MulMod: Modulus must be non-zero");
+    }
+
+    // Russian peasant multiplication with modular reduction.
+    // Avoids needing a 256-bit intermediate for __uint128_t.
+    __uint128_t result = 0;
+    A %= Modulus;
+    while (B > 0) {
+        if (B & 1) {
+            result = AddMod(result, A, Modulus);
+        }
+        B >>= 1;
+        if (B) {
+            A = AddMod(A, A, Modulus);
+        }
+    }
+    return result;
+}
+
 const mpz_class
 abs(
     const mpz_class& Value
@@ -74,6 +122,129 @@ Sqrt(
         y = (Value / x + x) / 2;
     }
     return x;
+}
+
+static inline
+const mpz_class
+Cbrt(
+    const mpz_class& Value
+)
+{
+    mpz_class result;
+    mpz_root(result.get_mpz_t(), Value.get_mpz_t(), 3);
+    return result;
+}
+
+static inline
+const uint64_t
+Cbrt(
+    const uint64_t& Value
+)
+{
+    uint64_t x = Value;
+    uint64_t y = (2 * x + Value / (x * x)) / 3;
+    while (y < x) {
+        x = y;
+        y = (2 * x + Value / (x * x)) / 3;
+    }
+    return x;
+}
+
+static inline
+const __uint128_t
+Cbrt(
+    const __uint128_t& Value
+)
+{
+    __uint128_t x = Value;
+    __uint128_t y = (2 * x + Value / (x * x)) / 3;
+    while (y < x) {
+        x = y;
+        y = (2 * x + Value / (x * x)) / 3;
+    }
+    return x;
+}
+
+static inline
+const mpz_class
+Root(
+    const mpz_class& Value,
+    const size_t Root
+)
+{
+    mpz_class result;
+    mpz_root(result.get_mpz_t(), Value.get_mpz_t(), Root);
+    return result;
+}
+
+static inline
+const uint64_t
+Root(
+    const uint64_t& Value,
+    const size_t Root
+)
+{
+    if (Root == 0) {
+        throw std::invalid_argument("Root: Root must be non-zero");
+    }
+    if (Root == 1) {
+        return Value;
+    }
+    uint64_t low = 0;
+    uint64_t high = Value;
+    while (low <= high) {
+        uint64_t mid = low + (high - low) / 2;
+        uint64_t mid_pow = 1;
+        for (size_t i = 0; i < Root; ++i) {
+            mid_pow *= mid;
+            if (mid_pow > Value) {
+                break;
+            }
+        }
+        if (mid_pow == Value) {
+            return mid;
+        } else if (mid_pow < Value) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return high;
+}
+
+static inline
+const __uint128_t
+Root(
+    const __uint128_t& Value,
+    const size_t Root
+)
+{
+    if (Root == 0) {
+        throw std::invalid_argument("Root: Root must be non-zero");
+    }
+    if (Root == 1) {
+        return Value;
+    }
+    __uint128_t low = 0;
+    __uint128_t high = Value;
+    while (low <= high) {
+        __uint128_t mid = low + (high - low) / 2;
+        __uint128_t mid_pow = 1;
+        for (size_t i = 0; i < Root; ++i) {
+            mid_pow *= mid;
+            if (mid_pow > Value) {
+                break;
+            }
+        }
+        if (mid_pow == Value) {
+            return mid;
+        } else if (mid_pow < Value) {
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+    return high;
 }
 
 static inline
@@ -378,10 +549,10 @@ ModExp(
 
     while (exp > 0) {
         if (exp % 2 == 1) {
-            result = (result * base) % Modulus;
+            result = MulMod(result, base, static_cast<__uint128_t>(Modulus));
         }
         exp /= 2;
-        base = (base * base) % Modulus;
+        base = MulMod(base, base, static_cast<__uint128_t>(Modulus));
     }
 
     return result;

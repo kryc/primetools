@@ -1,7 +1,11 @@
 #ifndef MILLERRABIN_HPP
 #define MILLERRABIN_HPP
 
+#include <array>
 #include <cstdint>
+#include <iostream>
+#include <span>
+#include <stdexcept>
 
 #include "maths.hpp"
 #include "random.hpp"

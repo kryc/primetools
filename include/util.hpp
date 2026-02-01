@@ -2,11 +2,14 @@
 #define Umpz_classIL_HPP
 
 #include <bit>
+#include <array>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <ostream>
+#include <type_traits>
 #include <vector>
 
 #include <stdint.h>

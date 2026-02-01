@@ -629,8 +629,8 @@ TrialDivision(
     // Number of chunk start positions where start <= upper_bound.
     const T chunks = (diff / block_size) + 1;
 
-    std::cout << "Trying factorization of primes in range [" + primetools::TruncateNumber<T>(lower_bound) + ", " + primetools::TruncateNumber<T>(upper_bound) +
-        "] using modulus " + std::to_string(Modulus) + ". " + primetools::ToString(chunks) + " chunks" << std::endl;
+    LogFn("Trying factorization of primes in range [" + primetools::TruncateNumber<T>(lower_bound) + ", " + primetools::TruncateNumber<T>(upper_bound) +
+        "] using modulus " + std::to_string(Modulus) + ". " + primetools::ToString(chunks) + " chunks");
 
     // Single-threaded linear search case
     if (num_threads == 1 && Strategy == TrialDivisionStrategy::Linear) {
