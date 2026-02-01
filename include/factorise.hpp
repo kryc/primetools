@@ -267,7 +267,7 @@ FactoriseNumber(
 
     // Try quadratic sieve
     LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Quadratic Sieve");
-    auto quadresult = QuadraticSieveFactor(remainder);
+    auto quadresult = QuadraticSieveFactor(remainder, LogFn);
     if (quadresult) {
         // If either factor is prime, add it to the factors
         if (primetools::IsPrime(quadresult->first)) {

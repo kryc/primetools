@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "maths.hpp"
+#include "logging.hpp"
 #include "primegenerator.hpp"
 #include "quadratic.hpp"
 #include "tonelli_shanks.hpp"
@@ -157,7 +158,8 @@ SolveRelations(
     const mpz_class& N,
     const std::vector<uint32_t>& Primes,
     const std::vector<Relation>& Relations,
-    const size_t ColBits
+    const size_t ColBits,
+    LogCallback LogFn
 ) {
     const size_t relCount = Relations.size();
     if (ColBits > kMaxCols || relCount > kMaxRelations) {
@@ -210,7 +212,7 @@ SolveRelations(
                 // We could have many dependencies; only log the first few attempts.
                 static size_t depLogged = 0;
                 if (depLogged < 3) {
-                    std::cerr << "[MPQS] dependency candidate" << "\n";
+                    LogFn("[MPQS] dependency candidate");
                     ++depLogged;
                 }
             }
@@ -226,7 +228,7 @@ SolveRelations(
                 ++depCount;
             }
         }
-        std::cerr << "[MPQS] dependencies=" << depCount << "\n";
+        LogFn(std::string("[MPQS] dependencies=") + std::to_string(depCount));
     }
 
     return std::nullopt;
@@ -455,7 +457,7 @@ MakeMPQSPolynomial(
     // Empirically this implementation uses M in the 2^13..2^16 range.
     // Use the largest (2^16) as a conservative default for the target.
     const double lnM = std::log(static_cast<double>(1u << 16));
-    const double lnATarget = std::max(0.0, std::log(2.0) + lnS - lnM);
+    const double lnATarget = std::max<double>(0.0, std::log(2.0) + lnS - lnM);
     const double pTargetD = std::exp(lnATarget / static_cast<double>(aPrimeCount));
 
     const uint32_t pMax = primes.back();
@@ -604,7 +606,8 @@ QuadraticSieveRecommendedFactorBaseBound(
 
 const std::optional<std::pair<mpz_class, mpz_class>>
 QuadraticSieveFactor(
-    const mpz_class& N
+    const mpz_class& N,
+    LogCallback LogFn
 ) {
     if (N < 2) {
         return std::nullopt;
@@ -943,7 +946,7 @@ QuadraticSieveFactor(
         }
 
         if (relations.size() >= nextSolveAt) {
-            auto factors = SolveRelations(N, primes, relations, colBits);
+            auto factors = SolveRelations(N, primes, relations, colBits, LogFn);
             if (factors) {
                 return factors;
             }
@@ -952,11 +955,10 @@ QuadraticSieveFactor(
         }
 
         if (debug) {
-            std::cerr << "[MPQS] poly=" << polyIdx
-                      << " a=" << poly.a
-                      << " relations=" << relations.size()
-                      << " partial=" << partialByLargePrime.size()
-                      << "\n";
+            LogFn(std::string("[MPQS] poly=") + std::to_string(polyIdx) +
+                  " a=" + poly.a.get_str() +
+                  " relations=" + std::to_string(relations.size()) +
+                  " partial=" + std::to_string(partialByLargePrime.size()));
         }
     }
 

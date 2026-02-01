@@ -8,6 +8,7 @@
 
 #include <gmpxx.h>
 
+#include "logging.hpp"
 #include "util.hpp"
 
 namespace primetools {
@@ -23,14 +24,16 @@ QuadraticSieveRecommendedFactorBaseBound(
 // Returns std::nullopt if no factor was found.
 const std::optional<std::pair<mpz_class, mpz_class>>
 QuadraticSieveFactor(
-    const mpz_class& N
+    const mpz_class& N,
+    LogCallback LogFn = LogStdOut
 );
 static inline
 const std::optional<std::pair<mpz_class, mpz_class>>
 QuadraticSieveFactor(
-    const __uint128_t& N
+    const __uint128_t& N,
+    LogCallback LogFn = LogStdOut
 ) {
-    return QuadraticSieveFactor(primetools::ConvertType<mpz_class>(N));
+    return QuadraticSieveFactor(primetools::ConvertType<mpz_class>(N), LogFn);
 }
 
 } // namespace primetools

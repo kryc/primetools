@@ -107,9 +107,10 @@ int main(
             return 1;
         }
 
+        const bool quiet = flags.find("quiet") != flags.end();
         const mpz_class n(positionals[1].data());
         std::cout << "Quadratic Sieve factorization of " << primetools::TruncateNumber(n) << std::endl;
-        auto result = primetools::QuadraticSieveFactor(n);
+        auto result = primetools::QuadraticSieveFactor(n, quiet ? primetools::LogQuiet : primetools::LogStdOut);
         OutputFactors(result);
     }
     else if (action == "fermat")
