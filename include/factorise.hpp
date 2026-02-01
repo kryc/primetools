@@ -193,7 +193,7 @@ FactoriseNumber(
     // Use Pollard's rho algorithm
     LogFn(factors.GetString() + " R: " + ToString(remainder) + " A: Brent-Pollard's Rho");
     for (;;) {
-        resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, kBrentPollardsRhoMaxSteps);
+        resultpair = BrentPollardsRhoMT(remainder, threads, kPollardsRhoDefaultM, kBrentPollardsRhoMaxSteps);
         if (resultpair) {
             std::cerr << "Brent-Pollard's Rho found factors: " << resultpair->first << " * " << resultpair->second << std::endl;
             // If either factor is prime, add it to the factors

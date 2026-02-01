@@ -21,11 +21,11 @@ namespace primetools {
 
 namespace {
     // The default max iterations is 2^32
-    static const size_t DefaultMaxIterations = (size_t)(1) << 32;
+    static const size_t kPollardsRhoDefaultMaxIterations = (size_t)(1) << 32;
     // The default starting value is 2
-    static const mpz_class DefaultStartingValue = 2;
+    static const mpz_class kPollardsRhoDefaultStartingValue = 2;
     // The deafult M is 64
-    static const size_t DefaultM = 64;
+    static const size_t kPollardsRhoDefaultM = 64;
 
     static const size_t PMinus1DefaultB = (size_t)(1) << 22;
     static const size_t PMinus1DefaultBases = 16ULL;
@@ -56,8 +56,8 @@ std::optional<std::pair<T, T>>
 PollardsRho(
     const T N,
     const std::function<T(T, T)> Polynomial = PollardsRhoPolynomial1<T>,
-    const T StartingValue = DefaultStartingValue,
-    const size_t Max = DefaultMaxIterations
+    const T StartingValue = kPollardsRhoDefaultStartingValue,
+    const size_t Max = kPollardsRhoDefaultMaxIterations
 )
 {
     T x = StartingValue;
@@ -82,15 +82,13 @@ PollardsRho(
 template <typename T>
 std::optional<std::pair<T, T>>
 BrentPollardsRho(
-    const T n,
-    const size_t block_size = DefaultM,
-    const T starting_value = DefaultStartingValue,
-    // NOTE: This is a cap on polynomial evaluations ("rho steps"), not on Brent cycle-doublings.
-    // Doubling-based iteration limits grow the work exponentially and are easy to misuse.
-    const size_t max_steps = DefaultMaxIterations
+    const T N,
+    const size_t BlockSize = kPollardsRhoDefaultM,
+    const T StartingValue = kPollardsRhoDefaultStartingValue,
+    const size_t MaxSteps = kPollardsRhoDefaultMaxIterations
 )
 {
-    T current = starting_value;
+    T current = StartingValue;
     T cycle_point = current;
     T gcd_result = 1;
     T product = 1;
@@ -100,57 +98,53 @@ BrentPollardsRho(
     size_t cycle_length = 1;
     size_t steps = 0;
 
-    const auto f = [&n](const T& x) -> T {
-        return (x * x - 1) % n;
-    };
-
-    while (steps < max_steps && gcd_result == 1) {
+    while (steps < MaxSteps && gcd_result == 1) {
         cycle_point = current;
 
-        for (size_t j = 0; j < cycle_length && steps < max_steps; ++j) {
-            current = f(current);
+        for (size_t j = 0; j < cycle_length && steps < MaxSteps; ++j) {
+            current = PollardsRhoPolynomial1(current, N);
             ++steps;
         }
 
         size_t block_counter = 0;
         product = 1;
 
-        while (block_counter < cycle_length && gcd_result == 1 && steps < max_steps) {
+        while (block_counter < cycle_length && gcd_result == 1 && steps < MaxSteps) {
             saved_point = current;
 
-            const size_t this_block = std::min(block_size, cycle_length - block_counter);
-            for (size_t m = 0; m < this_block && gcd_result == 1 && steps < max_steps; ++m) {
-                current = f(current);
+            const size_t this_block = std::min(BlockSize, cycle_length - block_counter);
+            for (size_t m = 0; m < this_block && gcd_result == 1 && steps < MaxSteps; ++m) {
+                current = PollardsRhoPolynomial1(current, N);
                 ++steps;
                 diff = (current > cycle_point) ? (current - cycle_point) : (cycle_point - current); //Avoid the abs call
                 // diff = primetools::abs(diff);
                 // mpz_abs(diff.get_mpz_t(), diff.get_mpz_t());
-                product = (product * diff) % n;
+                product = (product * diff) % N;
             }
-            gcd_result = primetools::Gcd(product, n);
+            gcd_result = primetools::Gcd(product, N);
             // mpz_gcd(gcd_result.get_mpz_t(), product.get_mpz_t(), n.get_mpz_t());
             block_counter += this_block;
         }
         cycle_length *= 2;
     }
 
-    if (gcd_result == n) {
+    if (gcd_result == N) {
         // Standard Brent fallback: walk forward from the saved point until a non-trivial gcd appears.
         // Use gcd(|x - ys|, n) rather than reusing the accumulated product.
         do {
-            if (steps >= max_steps) {
+            if (steps >= MaxSteps) {
                 break;
             }
-            saved_point = f(saved_point);
+            saved_point = PollardsRhoPolynomial1(saved_point, N);
             ++steps;
 
             diff = (cycle_point > saved_point) ? (cycle_point - saved_point) : (saved_point - cycle_point); //Avoid the abs call
-            gcd_result = primetools::Gcd(diff, n);
+            gcd_result = primetools::Gcd(diff, N);
         } while (gcd_result == 1);
     }
 
-    if (gcd_result > 1 && gcd_result < n) {
-        return std::make_pair(gcd_result, n / gcd_result);
+    if (gcd_result > 1 && gcd_result < N) {
+        return std::make_pair(gcd_result, N / gcd_result);
     }
 
     return std::nullopt;
@@ -161,8 +155,8 @@ std::optional<std::pair<T, T>>
 BrentPollardsRhoMT(
     const T N,
     const size_t Threads,
-    const size_t M = DefaultM,
-    const size_t MaxSteps = DefaultMaxIterations
+    const size_t M = kPollardsRhoDefaultM,
+    const size_t MaxSteps = kPollardsRhoDefaultMaxIterations
 )
 {
     std::vector<std::thread> thread_pool;
