@@ -5,17 +5,18 @@
 
 // Euclidean algorithm to compute the greatest
 // common divisor (GCD) of two numbers
-inline const mpz_class
+template <typename T>
+static  const T
 EuclideanAlgorithm(
-    const mpz_class& a,
-    const mpz_class& b
+    const T& a,
+    const T& b
 )
 {
-    mpz_class x = a;
-    mpz_class y = b;
+    T x = a;
+    T y = b;
 
     while (y != 0) {
-        mpz_class temp = y;
+        const T temp = y;
         y = x % y;
         x = temp;
     }

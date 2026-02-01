@@ -22,6 +22,13 @@ public:
         m_FactorCounts[Factor]++;
     }
 
+    void AddFactor(
+        const T& Factor,
+        const size_t Count
+    ) {
+        m_FactorCounts[Factor] += Count;
+    }
+
     void Update(
         const PrimeFactors<T>& Other
     ) {
@@ -118,6 +125,15 @@ public:
         m_FactorCounts.clear();
     }
 
+    template<typename T2>
+    PrimeFactors<T2> Convert() const {
+        PrimeFactors<T2> result;
+        for (const auto& [prime, count] : m_FactorCounts) {
+            result.AddFactor(primetools::ConvertType<T2>(prime), count);
+        }
+        return result;
+    }
+
     std::vector<std::pair<T, size_t>> ToVector() const {
         std::vector<std::pair<T, size_t>> vec;
         for (const auto& pair : m_FactorCounts) {
@@ -189,7 +205,7 @@ public:
             if constexpr (std::is_same_v<T, mpz_class>) {
                 mpz_pow_ui(factor.get_mpz_t(), prime.get_mpz_t(), count);
             } else {
-                factor = static_cast<T>(std::pow(prime, count));
+                factor = primetools::Pow(prime, count);
             }
             prod *= factor;
         }

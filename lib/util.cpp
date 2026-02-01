@@ -99,17 +99,6 @@ const bool IsPrime(
 }
 
 const mpz_class
-gcd(
-    const mpz_class& A,
-    const mpz_class& B
-)
-{
-    mpz_class result;
-    mpz_gcd(result.get_mpz_t(), A.get_mpz_t(), B.get_mpz_t());
-    return result;
-}
-
-const mpz_class
 floor_div(
     const mpz_class& A,
     const mpz_class& B)

@@ -202,7 +202,7 @@ PollardsPMinus1Stage1(
         // The base "a" does not need to be prime; it only needs to be coprime to n.
         T a = T(2) + base_index;
 
-        T d = primetools::gcd(a, N);
+        T d = primetools::gcd<T>(a, N);
         if (d > 1 && d < N) {
             return std::make_pair(d, N / d);
         }
@@ -214,7 +214,7 @@ PollardsPMinus1Stage1(
                 exp *= p;
             }
             a = primetools::ModExp(a, mpz_class(exp), N);
-            d = primetools::gcd(a - 1, N);
+            d = primetools::gcd<T>(a - 1, N);
             if (d > 1 && d < N) {
                 return std::make_pair(d, N / d);
             }

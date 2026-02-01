@@ -16,23 +16,6 @@
 
 namespace primetools {
 
-const std::optional<PrimeFactors<mpz_class>>
-FactorisePerfectSquare(
-    const mpz_class& N
-)
-{
-    if (N < 2) {
-        return std::nullopt;
-    }
-
-    if (mpz_perfect_square_p(N.get_mpz_t())) {
-        mpz_class sqrtN = sqrt(N);
-        return PrimeFactors<mpz_class>::FromPair(sqrtN, sqrtN);
-    }
-
-    return std::nullopt;
-}
-
 // Factorise against next _Count_ primes
 const std::optional<PrimeFactors<mpz_class>>
 FactorisePrimesInRange(

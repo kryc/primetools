@@ -246,7 +246,7 @@ int main(
         }
         else */
         if (primetools::fits_uint128(n)) {
-            auto result = primetools::TrialDivision<__uint128_t>(primetools::mpz_to_uint128(n), threads, blocksize, !noguess, bits, primetools::mpz_to_uint128(start), primetools::mpz_to_uint128(end), modulus);
+            auto result = primetools::TrialDivision<__uint128_t>(primetools::MpzToUint128(n), threads, blocksize, !noguess, bits, primetools::MpzToUint128(start), primetools::MpzToUint128(end), modulus);
             OutputFactors(result);
         }
         else

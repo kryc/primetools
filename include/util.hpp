@@ -194,11 +194,102 @@ const bool IsPrime(
     const uint64_t N
 );
 
-const mpz_class
+template <typename T>
+const T
 gcd(
-    const mpz_class& A,
-    const mpz_class& B
-);
+    const T& A,
+    const T& B
+)
+{
+    if constexpr (std::is_same_v<T, mpz_class>) {
+        mpz_class result;
+        mpz_gcd(result.get_mpz_t(), A.get_mpz_t(), B.get_mpz_t());
+        return result;
+    } else {
+        return EuclideanAlgorithm<T>(A, B);
+    }
+}
+
+// Integer exponentiation by squaring
+template <typename T>
+const T
+Pow(
+    const T& Base,
+    const size_t Exponent
+)
+{
+    if (Exponent == 0) {
+        return T(1);
+    }
+    if constexpr (std::is_same_v<T, mpz_class>) {
+        mpz_class result;
+        mpz_pow_ui(result.get_mpz_t(), Base.get_mpz_t(), Exponent);
+        return result;
+    } else {
+        T result = 1;
+        T base = Base;
+        size_t exp = Exponent;
+
+        while (exp > 0) {
+            if (exp & 1) {
+                if (result > (std::numeric_limits<T>::max() / base)) {
+                    throw std::overflow_error("Overflow in Pow function");
+                }
+                result *= base;
+            }
+            exp /= 2;
+            if (exp > 0) {
+                if (base > (std::numeric_limits<T>::max() / base)) {
+                    throw std::overflow_error("Overflow in Pow function");
+                }
+                base *= base;
+            }
+        }
+        return result;
+    }
+}
+
+// Integer square root
+static inline
+const mpz_class
+Sqrt(
+    const mpz_class& Value
+)
+{
+    mpz_class result;
+    mpz_sqrt(result.get_mpz_t(), Value.get_mpz_t());
+    return result;
+}
+
+static inline
+const uint64_t
+Sqrt(
+    const uint64_t& Value
+)
+{
+    uint64_t x = Value;
+    uint64_t y = (x + 1) / 2;
+    while (y < x) {
+        x = y;
+        y = (Value / x + x) / 2;
+    }
+    return x;
+}
+
+static inline
+const __uint128_t
+Sqrt(
+    const __uint128_t& Value
+)
+{
+    __uint128_t x = Value;
+    __uint128_t y = (x + 1) / 2;
+    while (y < x) {
+        x = y;
+        y = (Value / x + x) / 2;
+    }
+    return x;
+}
 
 const mpz_class
 floor_div(
@@ -418,7 +509,7 @@ fits_uint128(
 }
 
 static inline __uint128_t
-mpz_to_uint128(
+MpzToUint128(
     const mpz_class& Value
 )
 {
@@ -426,6 +517,49 @@ mpz_to_uint128(
     __uint128_t high = mpz_class(Value >> 64).get_ui();
     result |= (high << 64);
     return result;
+}
+
+static inline mpz_class
+Uint128ToMpz(
+    const __uint128_t& Value
+)
+{
+    mpz_class result = mpz_class(static_cast<uint64_t>(Value & 0xFFFFFFFFFFFFFFFF));
+    result |= (mpz_class(static_cast<uint64_t>(Value >> 64)) << 64);
+    return result;
+}
+
+template <typename T1, typename T2>
+static inline T1
+ConvertType(
+    const T2& Value
+)
+{
+    if constexpr (std::is_same_v<T1, mpz_class>) {
+        if constexpr (std::is_same_v<T2, __uint128_t>) {
+            return Uint128ToMpz(Value);
+        } else {
+            return mpz_class(Value);
+        }
+    } else if constexpr (std::is_same_v<T1, __uint128_t>) {
+        if constexpr (std::is_same_v<T2, mpz_class>) {
+            if (Value > std::numeric_limits<T1>::max()) {
+                throw std::overflow_error("ConvertType: Value too large for target type");
+            }
+            return MpzToUint128(Value);
+        } else {
+            return static_cast<__uint128_t>(Value);
+        }
+    } else {
+        if (Value > std::numeric_limits<T1>::max()) {
+            throw std::overflow_error("ConvertType: Value too large for target type");
+        }
+        if constexpr (std::is_same_v<T2, mpz_class>) {
+            return static_cast<T1>(Value.get_ui());
+        } else {
+            return static_cast<T1>(Value);
+        }
+    }
 }
 
 const bool
@@ -528,7 +662,7 @@ IsPerfectSquare(
     const uint64_t N
 )
 {
-    uint64_t root = static_cast<uint64_t>(std::sqrt(N));
+    const uint64_t root = Sqrt(N);
     return root * root == N || (root + 1) * (root + 1) == N;
 }
 

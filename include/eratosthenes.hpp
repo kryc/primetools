@@ -6,6 +6,8 @@
 
 #include <gmpxx.h>
 
+#include "util.hpp"
+
 namespace primetools {
 
 static const std::vector<bool>
@@ -16,7 +18,7 @@ SieveOfEratosthenesBool(
     std::vector<bool> primes(Limit + 1, true);
     primes[0] = primes[1] = false; // 0 and 1 are not prime numbers
 
-    const size_t s = static_cast<size_t>(std::sqrt(Limit));
+    const size_t s = primetools::Sqrt(Limit);
 
     for (size_t p = 2; p < s; ++p) {
         if (primes[p]) {
@@ -37,7 +39,7 @@ SieveOfEratosthenesOddBool(
     std::vector<bool> primes((Limit / 2) + 1, true); // Only store odd numbers
     primes[0] = false; // 1 is not a prime number
 
-    const size_t s = static_cast<size_t>(std::sqrt(Limit));
+    const size_t s = primetools::Sqrt(Limit);
 
     for (size_t p = 3; p <= s; p += 2) {
         if (primes[p / 2]) {
@@ -74,7 +76,7 @@ SegmentedSieve(
     const size_t Limit
 )
 {
-    const size_t segment_size = std::max(static_cast<size_t>(std::sqrt(Limit)), static_cast<size_t>(32768));
+    const size_t segment_size = std::max<size_t>(primetools::Sqrt(Limit), 32768);
     std::vector<T> primes;
     primes.reserve(Limit / std::log(Limit)); // Approximate number of primes
 

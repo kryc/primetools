@@ -42,10 +42,27 @@ FermatAlgorithmToString(
     const FermatAlgorithm Algorithm
 );
 
+// Given an N to factor, calculate the maximum number of iterations
+// to perform in Fermat's factorization method. The given formula is
+// The 4th root of N, rounded up to the nearest integer.
+template <typename T>
 const size_t
 CalculateFermatIterations(
-    const mpz_class& N
-);
+    const T& N
+)
+{
+    if constexpr (std::is_same_v<T, mpz_class>) {
+        mpz_class root4;
+        mpz_root(root4.get_mpz_t(), N.get_mpz_t(), 4);
+        return static_cast<size_t>(root4.get_ui()) + 1;
+    } else if constexpr (std::is_same_v<T, __uint128_t>) {
+        __uint128_t root4 = static_cast<__uint128_t>(std::cbrt(std::cbrt(static_cast<long double>(N))));
+        return static_cast<size_t>(root4) + 1;
+    } else {
+        uint64_t root4 = static_cast<uint64_t>(std::cbrt(std::cbrt(static_cast<long double>(N))));
+        return static_cast<size_t>(root4) + 1;
+    }
+}
 
 template <typename T>
 const std::optional<std::pair<T, T>>
@@ -61,15 +78,15 @@ FermatFactorisationAlgorithm1(
 
     T a, b;
 
-    a = sqrt(N) + 1 + Offset;
+    a = primetools::Sqrt(N) + 1 + Offset;
 
     for (size_t i = 0; i < Max; ++i) {
         b = (a * a) - N;
 
         if (primetools::IsPerfectSquare(b)) {
             return std::make_pair(
-                a - sqrt(b),
-                a + sqrt(b)
+                a - primetools::Sqrt(b),
+                a + primetools::Sqrt(b)
             );
         }
 
@@ -91,7 +108,7 @@ FermatFactorisationAlgorithm2(
     }
 
     T u, v, r;
-    u = 2 * sqrt(N);
+    u = 2 * primetools::Sqrt(N);
     v = 0;
 
     for (size_t i = 0; i < Max; ++i) {
@@ -139,7 +156,7 @@ ModifiedFermatFactorisation4(
         0,       0b0100000101   // 19 = { 0, 2, 8 }
     };
 
-    T x = sqrt(N) + 1;
+    T x = primetools::Sqrt(N) + 1;
     uint64_t NMod20 = primetools::modulo(N, 20);
     
     // Repeat until x is congruent to 0 mod 10
@@ -148,13 +165,13 @@ ModifiedFermatFactorisation4(
         T b = (x * x) - N;
         if (primetools::IsPerfectSquare(b)) {
             return std::make_pair(
-                x - sqrt(b), x + sqrt(b)
+                x - primetools::Sqrt(b), x + primetools::Sqrt(b)
             );
         }
         x++;
     }
 
-    mpz_class y = sqrt(x * x - N);
+    mpz_class y = primetools::Sqrt(x * x - N);
 
     uint32_t check = MFFV4XMod10LUT[NMod20];
 
@@ -163,8 +180,8 @@ ModifiedFermatFactorisation4(
         if ((1 << x_mod_10) & check) {
             y = x * x - N;
             if (primetools::IsPerfectSquare(y)) {
-                T p = x - sqrt(y);
-                T q = x + sqrt(y);
+                T p = x - primetools::Sqrt(y);
+                T q = x + primetools::Sqrt(y);
                 return std::make_pair(p, q);
             }
         }
@@ -225,7 +242,7 @@ FMMod20Precomp(
     constexpr size_t kIncrementPerCycle = 40; // Each cycle increases u by 40
     constexpr size_t kIncrementPerBlock = kIncrementPerCycle * kCyclesPerBlock;
 
-    T u0 = sqrt(N) + 1;
+    T u0 = primetools::Sqrt(N) + 1;
 
     // Repeat until u is congruent to 0 mod 10
     // (or we found a factor)
@@ -233,7 +250,7 @@ FMMod20Precomp(
         const T b = (u0 * u0) - N;
         if (primetools::IsPerfectSquare(b)) {
             return std::make_pair(
-                u0 - sqrt(b), u0 + sqrt(b)
+                u0 - primetools::Sqrt(b), u0 + primetools::Sqrt(b)
             );
         }
         u0++;
@@ -251,7 +268,7 @@ FMMod20Precomp(
         const T b = (u * u) - N;
         if (primetools::IsPerfectSquare(b)) {
             return std::make_pair(
-                u - sqrt(b), u + sqrt(b)
+                u - primetools::Sqrt(b), u + primetools::Sqrt(b)
             );
         }
     }
@@ -271,7 +288,7 @@ FMMod20Precomp(
             const T b = (u * u) - N;
             if (primetools::IsPerfectSquare(b)) {
                 return std::make_pair(
-                    u - sqrt(b), u + sqrt(b)
+                    u - primetools::Sqrt(b), u + primetools::Sqrt(b)
                 );
             }
         }

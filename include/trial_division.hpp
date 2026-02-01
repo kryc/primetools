@@ -48,7 +48,7 @@ GetUpperAndLowerBounds(
     const size_t bits = Bits != 0 ? Bits : (GuessSize ? primetools::GuessSizeOfPrimeFactors(N, true) : primetools::BitSize(N));
     T lower_bound = GuessSize ? (T(1) << (bits - 1)) + RangeLower : RangeLower;
     T upper_bound = (RangeUpper == 0) 
-        ? (GuessSize ? primetools::min(T(1) << bits, T(sqrt(N))) : T(sqrt(N))) 
+        ? (GuessSize ? primetools::min(T(1) << bits, primetools::Sqrt(N)) : primetools::Sqrt(N)) 
         : (GuessSize ? lower_bound + RangeUpper : RangeUpper);
 
     // Step back lower_bound to be a multiple of Modulus
@@ -616,6 +616,10 @@ TrialDivision(
     // Get upper and lower bounds
     auto [lower_bound, upper_bound, bits] = GetUpperAndLowerBounds<T>(N, Modulus, GuessSize, Bits, RangeLower, RangeUpper);
 
+    if (upper_bound < lower_bound) {
+        throw std::runtime_error("Trial division upper bound is less than lower bound.");
+    }
+
     PrimeFactors<T> factors;
 
     std::atomic<bool> found{false};
@@ -625,8 +629,8 @@ TrialDivision(
     // Number of chunk start positions where start <= upper_bound.
     const T chunks = (diff / block_size) + 1;
 
-    LogFn("Trying factorization of primes in range [" + primetools::TruncateNumber<T>(lower_bound) + ", " + primetools::TruncateNumber<T>(upper_bound) +
-        "] using modulus " + std::to_string(Modulus) + ". " + primetools::ToString(chunks) + " chunks");
+    std::cout << "Trying factorization of primes in range [" + primetools::TruncateNumber<T>(lower_bound) + ", " + primetools::TruncateNumber<T>(upper_bound) +
+        "] using modulus " + std::to_string(Modulus) + ". " + primetools::ToString(chunks) + " chunks" << std::endl;
 
     // Single-threaded linear search case
     if (num_threads == 1 && Strategy == TrialDivisionStrategy::Linear) {

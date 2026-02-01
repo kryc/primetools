@@ -33,7 +33,7 @@ TrialDivisionSimd(
     uint64_t target64 = N.get_ui();
 
     // Get the square root of N as this is our upper bound for trial division
-    const mpz_class upper = sqrt(N);
+    const mpz_class upper = primetools::Sqrt(N);
     // const double upperd = upper.get_d();
 
     std::cout << "Trying factorization of primes below " << upper.get_str() << " using SIMD wheel-30 factorization." << std::endl;

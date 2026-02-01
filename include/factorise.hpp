@@ -23,18 +23,63 @@
 
 namespace primetools {
 
-constexpr size_t kSmallPminus1B = (size_t)(1) << 20;
+constexpr size_t kSmallPminus1B2 = 20;
+constexpr size_t kSmallPminus1B = (size_t)(1) << kSmallPminus1B2;
 constexpr size_t kSmallPminus1Bases = 128;
-constexpr size_t kLargePminus1B = (size_t)(1) << 32;
+constexpr size_t kLargePminus1B2 = 28;
+constexpr size_t kLargePminus1B = (size_t)(1) << kLargePminus1B2;
 constexpr size_t kLargePminus1Bases = 32;
 constexpr size_t kSmallWheelModulus = 510510;
 constexpr size_t kLargeWheelModulus = 6469693230;
 
 // Factorise a perfect square
-const std::optional<PrimeFactors<mpz_class>>
+template <typename T>
+const std::optional<PrimeFactors<T>>
 FactorisePerfectSquare(
-    const mpz_class& N
-);
+    const T& N
+)
+{
+    if (N < 2) {
+        return std::nullopt;
+    }
+
+    if (IsPerfectSquare(N)) {
+        const T sqrtN = primetools::Sqrt(N);
+        return PrimeFactors<T>::FromPair(sqrtN, sqrtN);
+    }
+
+    return std::nullopt;
+}
+
+// Validate our factorization result and remainder
+template <typename T>
+static inline const bool
+ValidateFactorization(
+    const T& N,
+    const PrimeFactors<T>& Factors
+)
+{
+    const T product = Factors.Product();
+    if (product > N) {
+        return false;
+    }
+    if (N % product != 0) {
+        return false;
+    }
+    return true;
+}
+
+template <typename T>
+static inline void
+ValidateFactorizationOrThrow(
+    const T& N,
+    const PrimeFactors<T>& Factors
+)
+{
+    if (!ValidateFactorization(N, Factors)) {
+        throw std::runtime_error("Invalid factorization result. N = " + ToString(N) + ", Factors = " + Factors.GetString() + ", Product = " + ToString(Factors.Product()));
+    }
+}
 
 // Try to factorise with increasing complexity
 template <typename T>
@@ -75,6 +120,9 @@ FactoriseNumber(
         }
     }
 
+    // Validate current factorization
+    ValidateFactorizationOrThrow(N, factors);
+
     // Do a quick lookup of the remainder in the factor DB
     if (Database.IsOpen()) {
         auto lookup = Database.GetFactors(remainder);
@@ -86,7 +134,7 @@ FactoriseNumber(
     }
 
     // Try using Pollards P-1 with a small B
-    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^20)");
+    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: P-1 (B=2^" + std::to_string(kSmallPminus1B2) + ")");
     constexpr size_t kPollardB = kSmallPminus1B;
     constexpr size_t kPollardBases = kSmallPminus1Bases;
     auto resultpair = PollardsPMinus1MT(remainder, threads, kPollardB, kPollardBases);
@@ -108,8 +156,11 @@ FactoriseNumber(
         return factors;
     }
 
+    // Validate current factorization
+    ValidateFactorizationOrThrow(N, factors);
+
     // Use Fermat's factorization method up to 2^24 iterations
-    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: FMMod20Precomp");
+    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: FMMod20Precomp");
     size_t iterations = CalculateFermatIterations(N);
     iterations = std::min(iterations, (size_t)8192*2);
     resultpair = FMMod20PrecompMT(remainder, threads, iterations);
@@ -131,8 +182,11 @@ FactoriseNumber(
         return factors;
     }
 
+    // Validate current factorization
+    ValidateFactorizationOrThrow(N, factors);
+
     // Use Pollard's rho algorithm
-    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: Brent-Pollard's Rho");
+    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: Brent-Pollard's Rho");
     for (;;) {
         resultpair = BrentPollardsRhoMT(remainder, threads, DefaultM, (size_t)(1) << 4);
         if (resultpair) {
@@ -158,7 +212,7 @@ FactoriseNumber(
     }
 
     // // Try using Pollards P-1 with a large B
-    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: P-1 (B=2^32)");
+    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: P-1 (B=2^" + std::to_string(kLargePminus1B2) + ")");
     constexpr size_t kPollardLargeB = kLargePminus1B;
     constexpr size_t kPollardLargeBases = kLargePminus1Bases;
     resultpair = PollardsPMinus1MT(remainder, threads, kPollardLargeB, kPollardLargeBases);
@@ -180,6 +234,9 @@ FactoriseNumber(
         return factors;
     }
 
+    // Validate current factorization
+    ValidateFactorizationOrThrow(N, factors);
+
     // Check the database for any cached factors before trial division
     if (Database.IsOpen()) {
         LogFn("Checking FactorDB for cached factors...");
@@ -199,8 +256,11 @@ FactoriseNumber(
         return factors;
     }
 
+    // Validate current factorization
+    ValidateFactorizationOrThrow(N, factors);
+
     // Fall back to hybrid trial division (this is not ideal!)
-    LogFn("F: " + factors.GetString() + " R: " + remainder.get_str() + " A: Trial Division");
+    LogFn("F: " + factors.GetString() + " R: " + ToString(remainder) + " A: Trial Division");
     result = TrialDivision(remainder, threads, 0, false, 0, T(0), T(0), kLargeWheelModulus, TrialDivisionStrategy::MeetInTheMiddle, LogFn);
     if (result) {
         factors.Update(result.value());
@@ -216,28 +276,29 @@ const std::optional<PrimeFactors<T>>
 Factorise(
     const T& N,
     const size_t Threads = 0,
-    FactorDB<T>& Database = FactorDB<T>(),
-    LogCallback LogFn = LogStdOut
-)
-{
-    auto factors = FactoriseNumber<T>(N, Database, Threads, LogFn);
-    if (factors && Database.IsOpen()) {
-        LogFn("Storing factors in FactorDB...");
-        Database.AddFactors(factors.value());
-    }
-    return factors;
-}
-
-// Try to factorise with increasing complexity
-template <typename T>
-const std::optional<PrimeFactors<T>>
-Factorise(
-    const T& N,
-    const size_t Threads = 0,
     const std::string_view FactorDBPath = "",
     LogCallback LogFn = LogStdOut
 )
 {
+    // See if we can convert the number to a smaller type for faster factorization
+    if constexpr (std::is_same_v<T, mpz_class>) {
+        if (N.fits_ulong_p()) {
+            auto factors = Factorise<uint64_t>((uint64_t)N.get_ui(), Threads, FactorDBPath, LogFn);
+            if (factors) {
+                return factors->template Convert<mpz_class>();
+            } else {
+                return std::nullopt;
+            }
+        } else if (mpz_sizeinbase(N.get_mpz_t(), 2) <= 128) {
+            auto factors = Factorise<__uint128_t>(MpzToUint128(N), Threads, FactorDBPath, LogFn);
+            if (factors) {
+                return factors->template Convert<mpz_class>();
+            } else {
+                return std::nullopt;
+            }
+        }
+    }
+
     FactorDB<T> db(FactorDBPath);
     if (db.IsOpen()) {
         LogFn("Checking FactorDB for cached factors...");
@@ -247,6 +308,7 @@ Factorise(
             return lookup;
         }
     }
+
     auto factors = FactoriseNumber<T>(N, db, Threads, LogFn);
     if (factors && db.IsOpen()) {
         LogFn("Storing factors in FactorDB...");

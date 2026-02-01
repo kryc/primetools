@@ -20,7 +20,7 @@ SQUFOF(
         return std::nullopt;
     }
 
-    mpz_class P0 = sqrt(N);
+    mpz_class P0 = primetools::Sqrt(N);
     mpz_class P_prev = P0;          // P_{i-1} in the forward sequence, starts as P_0
     mpz_class Q_curr = N - P0 * P0; // Q_i in the forward sequence, starts as Q_1
 
@@ -36,7 +36,7 @@ SQUFOF(
 
         // Check if Q_i (Q_curr) is a positive perfect square
         if (Q_curr > 0 && mpz_perfect_square_p(Q_curr.get_mpz_t())) {
-            mpz_class S = sqrt(Q_curr); // S = sqrt(Q_i)
+            mpz_class S = primetools::Sqrt(Q_curr); // S = sqrt(Q_i)
 
             // Start Reduction Phase
             mpz_class P_prime_prev = P_curr; // P'_0 = P_i (from forward pass)
@@ -58,7 +58,7 @@ SQUFOF(
                     mpz_class P_prime_curr_val = primetools::floor_div(P0 + P_prime_prev, Q_prime_curr_red) * Q_prime_curr_red - P_prime_prev;
 
                     if (P_prime_curr_val == P_prime_prev) { // Termination condition for reduction
-                        mpz_class factor = gcd(P_prime_curr_val, N);
+                        mpz_class factor = primetools::gcd(P_prime_curr_val, N);
                         if (factor > 1 && factor < N) {
                             return PrimeFactors<mpz_class>::FromPair(factor, N / factor); // Factor found!
                         }
